@@ -5,53 +5,78 @@
 // Copy the Web App URL and paste it into src/config.js
 
 function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Itemlist');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Itemlist');
 
-  // Save mode — triggered when app sends ?action=save&...
-  if (e.parameter.action === 'save') {
-    const identifier = String(e.parameter.barcode || '').trim();
-    const description = String(e.parameter.description || '').trim();
-    const depth  = parseFloat(e.parameter.depth)  || 0;
-    const width  = parseFloat(e.parameter.width)  || 0;
-    const height = parseFloat(e.parameter.height) || 0;
-    const weight = parseFloat(e.parameter.weight) || 0;
+    if (!sheet) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: false, error: 'Sheet named "Itemlist" not found. Check tab name.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
+    // Save mode
+    if (e.parameter.action === 'save') {
+      const identifier  = String(e.parameter.barcode     || '').trim();
+      const description = String(e.parameter.description || '').trim();
+      const depth       = parseFloat(e.parameter.depth)  || 0;
+      const width       = parseFloat(e.parameter.width)  || 0;
+      const height      = parseFloat(e.parameter.height) || 0;
+      const weight      = parseFloat(e.parameter.weight) || 0;
+
+      const data = sheet.getDataRange().getValues();
+      let found = false;
+
+      for (let i = 1; i < data.length; i++) {
+        const barcode     = String(data[i][0]).trim();
+        const articleCode = String(data[i][1]).trim();
+        if (barcode === identifier || articleCode === identifier) {
+          const row = i + 1;
+          sheet.getRange(row, 4).setValue(depth);
+          sheet.getRange(row, 5).setValue(width);
+          sheet.getRange(row, 6).setValue(height);
+          sheet.getRange(row, 7).setValue(weight);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        sheet.appendRow([identifier, '', description, depth, width, height, weight]);
+      }
+
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, found: found }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // List mode
     const data = sheet.getDataRange().getValues();
-    let found = false;
-
+    const items = [];
     for (let i = 1; i < data.length; i++) {
       const barcode     = String(data[i][0]).trim();
       const articleCode = String(data[i][1]).trim();
-      if (barcode === identifier || articleCode === identifier) {
-        const row = i + 1;
-        sheet.getRange(row, 4).setValue(depth);
-        sheet.getRange(row, 5).setValue(width);
-        sheet.getRange(row, 6).setValue(height);
-        sheet.getRange(row, 7).setValue(weight);
-        found = true;
-        break;
-      }
+      const description = String(data[i][2]).trim();
+      if (barcode || articleCode) items.push({ barcode, articleCode, description });
     }
-
-    if (!found) {
-      sheet.appendRow([identifier, '', description, depth, width, height, weight]);
-    }
-
     return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
+      .createTextOutput(JSON.stringify(items))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
 
-  // List mode — return all items for validation
-  const data = sheet.getDataRange().getValues();
-  const items = [];
-  for (let i = 1; i < data.length; i++) {
-    const barcode     = String(data[i][0]).trim();
-    const articleCode = String(data[i][1]).trim();
-    const description = String(data[i][2]).trim();
-    if (barcode || articleCode) items.push({ barcode, articleCode, description });
+// Run this function directly in Apps Script editor to test writing to sheet
+function testSave() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Itemlist');
+  if (!sheet) {
+    Logger.log('ERROR: Sheet "Itemlist" not found');
+    return;
   }
-  return ContentService
-    .createTextOutput(JSON.stringify(items))
-    .setMimeType(ContentService.MimeType.JSON);
+  sheet.appendRow(['TEST_BARCODE', '', 'Test Item', 10, 20, 30, 0.5]);
+  Logger.log('SUCCESS: Row appended');
 }

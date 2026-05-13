@@ -36,7 +36,7 @@ export default function DimensionForm({ barcode, description, setDescription, on
       })
       const res = await fetch(`${SCRIPT_URL}?${params}`)
       const json = await res.json()
-      if (!json.ok) throw new Error('Script returned error')
+      if (!json.ok) throw new Error(json.error || 'Script returned error')
       setSavedOk(true)
       setTimeout(() => onSaved(), 1200)
     } catch (err) {
