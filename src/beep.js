@@ -14,6 +14,19 @@ export function beepSuccess() {
   osc.stop(ac.currentTime + 0.3)
 }
 
+export function beepNotFound() {
+  const ac = ctx()
+  const osc = ac.createOscillator()
+  const gain = ac.createGain()
+  osc.connect(gain)
+  gain.connect(ac.destination)
+  osc.frequency.setValueAtTime(600, ac.currentTime)
+  gain.gain.setValueAtTime(0.2, ac.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2)
+  osc.start(ac.currentTime)
+  osc.stop(ac.currentTime + 0.2)
+}
+
 export function beepError() {
   const ac = ctx()
   const osc = ac.createOscillator()

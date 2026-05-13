@@ -5,13 +5,14 @@ export default function DimensionForm({ barcode, description, setDescription, on
   const [width, setWidth] = useState('')
   const [depth, setDepth] = useState('')
   const [height, setHeight] = useState('')
+  const [weight, setWeight] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
   async function handleSave() {
-    if (!width || !depth || !height) {
-      setSaveError('Please fill in all three dimensions.')
+    if (!width || !depth || !height || !weight) {
+      setSaveError('Please fill in all dimensions and weight.')
       return
     }
 
@@ -34,6 +35,7 @@ export default function DimensionForm({ barcode, description, setDescription, on
           width: parseFloat(width),
           depth: parseFloat(depth),
           height: parseFloat(height),
+          weight: parseFloat(weight),
         }),
       })
       setSavedOk(true)
@@ -75,7 +77,7 @@ export default function DimensionForm({ barcode, description, setDescription, on
 
       <div className="dims-grid">
         <div className="field">
-          <label htmlFor="width">Width (cm)</label>
+          <label htmlFor="width">W (cm)</label>
           <input
             id="width"
             className="input dim-input"
@@ -83,28 +85,14 @@ export default function DimensionForm({ barcode, description, setDescription, on
             inputMode="decimal"
             min="0"
             step="0.1"
-            placeholder="0"
+            placeholder="0.0"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
             autoFocus
           />
         </div>
         <div className="field">
-          <label htmlFor="depth">Depth (cm)</label>
-          <input
-            id="depth"
-            className="input dim-input"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.1"
-            placeholder="0"
-            value={depth}
-            onChange={(e) => setDepth(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="height">Height (cm)</label>
+          <label htmlFor="height">H (cm)</label>
           <input
             id="height"
             className="input dim-input"
@@ -112,11 +100,40 @@ export default function DimensionForm({ barcode, description, setDescription, on
             inputMode="decimal"
             min="0"
             step="0.1"
-            placeholder="0"
+            placeholder="0.0"
             value={height}
             onChange={(e) => setHeight(e.target.value)}
           />
         </div>
+        <div className="field">
+          <label htmlFor="depth">D (cm)</label>
+          <input
+            id="depth"
+            className="input dim-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0.0"
+            value={depth}
+            onChange={(e) => setDepth(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="field">
+        <label htmlFor="weight">Weight (kg) <span className="muted">e.g. 0.01</span></label>
+        <input
+          id="weight"
+          className="input"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          placeholder="0.01"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+        />
       </div>
 
       {saveError && <p className="error-msg">{saveError}</p>}

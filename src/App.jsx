@@ -7,7 +7,7 @@ export default function App() {
   const [step, setStep] = useState('scan')
   const [barcode, setBarcode] = useState('')
   const [description, setDescription] = useState('')
-  const [validBarcodes, setValidBarcodes] = useState(null)
+  const [itemList, setItemList] = useState(null)
   const [listError, setListError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
 
@@ -19,12 +19,16 @@ export default function App() {
     setListError(null)
     fetch(SCRIPT_URL)
       .then((res) => res.json())
-      .then((data) => setValidBarcodes(data))
+      .then((data) => setItemList(data))
       .catch(() => setListError('Failed to load item list. Check your connection.'))
   }, [retryCount])
 
   function handleDetected(code) {
+    const found = itemList?.find(
+      (item) => item.barcode === code || item.articleCode === code
+    )
     setBarcode(code)
+    setDescription(found?.description || '')
     setStep('form')
   }
 
@@ -57,7 +61,7 @@ export default function App() {
     )
   }
 
-  if (validBarcodes === null) {
+  if (itemList === null) {
     return (
       <div className="app">
         {header}
@@ -73,7 +77,7 @@ export default function App() {
       {header}
 
       {step === 'scan' && (
-        <BarcodeScanner onDetected={handleDetected} validBarcodes={validBarcodes} />
+        <BarcodeScanner onDetected={handleDetected} itemList={itemList} />
       )}
 
       {step === 'form' && (

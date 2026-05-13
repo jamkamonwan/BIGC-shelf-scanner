@@ -1,15 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { beepSuccess, beepError } from '../beep'
+import { beepSuccess, beepNotFound } from '../beep'
 
-export default function BarcodeScanner({ onDetected, validBarcodes }) {
+export default function BarcodeScanner({ onDetected, itemList }) {
   const videoRef = useRef(null)
   const controlsRef = useRef(null)
   const [error, setError] = useState(null)
   const [ready, setReady] = useState(false)
-  const [notInList, setNotInList] = useState(false)
   const [manualBarcode, setManualBarcode] = useState('')
   const [showManual, setShowManual] = useState(false)
+
+  function isInList(code) {
+    return itemList.some((item) => item.barcode === code || item.articleCode === code)
+  }
+
+  function handleCode(code) {
+    if (isInList(code)) {
+      beepSuccess()
+    } else {
+      beepNotFound()
+    }
+    onDetected(code)
+  }
 
   useEffect(() => {
     const reader = new BrowserMultiFormatReader()
@@ -23,16 +35,9 @@ export default function BarcodeScanner({ onDetected, validBarcodes }) {
           if (stopped) return
           controlsRef.current = controls
           if (result) {
-            const code = result.getText()
-            if (!validBarcodes.includes(code)) {
-              beepError()
-              setNotInList(true)
-              return
-            }
-            beepSuccess()
             stopped = true
             controls.stop()
-            onDetected(code)
+            handleCode(result.getText())
           }
         }
       )
@@ -43,19 +48,13 @@ export default function BarcodeScanner({ onDetected, validBarcodes }) {
       stopped = true
       controlsRef.current?.stop()
     }
-  }, [onDetected, validBarcodes])
+  }, [onDetected, itemList])
 
   function handleManualSubmit(e) {
     e.preventDefault()
     const val = manualBarcode.trim()
     if (!val) return
-    if (!validBarcodes.includes(val)) {
-      beepError()
-      setNotInList(true)
-      return
-    }
-    beepSuccess()
-    onDetected(val)
+    handleCode(val)
   }
 
   return (
@@ -73,18 +72,12 @@ export default function BarcodeScanner({ onDetected, validBarcodes }) {
         )}
       </div>
 
-      {notInList && (
-        <p className="error-msg" style={{ textAlign: 'center' }}>
-          Barcode not in item list. Try again.
-        </p>
-      )}
-
       <p className="scan-hint">Point camera at a barcode to scan</p>
 
       <div className="manual-section">
         <button
           className="btn-ghost"
-          onClick={() => { setShowManual((v) => !v); setNotInList(false) }}
+          onClick={() => setShowManual((v) => !v)}
         >
           {showManual ? 'Hide manual entry' : 'Enter barcode manually'}
         </button>
@@ -95,9 +88,9 @@ export default function BarcodeScanner({ onDetected, validBarcodes }) {
               className="input"
               type="text"
               inputMode="numeric"
-              placeholder="Type barcode number"
+              placeholder="Type barcode or article code"
               value={manualBarcode}
-              onChange={(e) => { setManualBarcode(e.target.value); setNotInList(false) }}
+              onChange={(e) => setManualBarcode(e.target.value)}
               autoFocus
             />
             <button type="submit" className="btn-primary" disabled={!manualBarcode.trim()}>
