@@ -11,11 +11,14 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const [showManual, setShowManual] = useState(false)
 
   function isInList(code) {
-    return itemList.some((item) => item.barcode === code || item.articleCode === code)
+    if (!Array.isArray(itemList)) return false
+    return itemList.some(
+      (item) => (item.barcode || '') === code || (item.articleCode || '') === code
+    )
   }
 
   function handleCode(code) {
-    if (isInList(code)) beepSuccess()
+    try { if (isInList(code)) beepSuccess() } catch (_) {}
     onDetected(code)
   }
 

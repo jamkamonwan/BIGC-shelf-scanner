@@ -1,7 +1,11 @@
-const ctx = () => new (window.AudioContext || window.webkitAudioContext)()
+const ctx = () => {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext
+  return AudioCtx ? new AudioCtx() : null
+}
 
 export function beepSuccess() {
   const ac = ctx()
+  if (!ac) return
   const osc = ac.createOscillator()
   const gain = ac.createGain()
   osc.connect(gain)
@@ -16,6 +20,7 @@ export function beepSuccess() {
 
 export function beepNotFound() {
   const ac = ctx()
+  if (!ac) return
   const osc = ac.createOscillator()
   const gain = ac.createGain()
   osc.connect(gain)
@@ -29,6 +34,7 @@ export function beepNotFound() {
 
 export function beepError() {
   const ac = ctx()
+  if (!ac) return
   const osc = ac.createOscillator()
   const gain = ac.createGain()
   osc.connect(gain)

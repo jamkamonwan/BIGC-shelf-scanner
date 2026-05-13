@@ -19,17 +19,25 @@ export default function App() {
     setListError(null)
     fetch(SCRIPT_URL)
       .then((res) => res.json())
-      .then((data) => setItemList(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setItemList(data)
+        } else {
+          setListError(data.error || 'Unexpected response from server.')
+        }
+      })
       .catch(() => setListError('Failed to load item list. Check your connection.'))
   }, [retryCount])
 
   function handleDetected(code) {
     const trimmed = code.trim()
-    const found = itemList?.find(
-      (item) =>
-        item.barcode.trim() === trimmed ||
-        item.articleCode.trim() === trimmed
-    )
+    const found = Array.isArray(itemList)
+      ? itemList.find(
+          (item) =>
+            (item.barcode || '').trim() === trimmed ||
+            (item.articleCode || '').trim() === trimmed
+        )
+      : null
     setBarcode(trimmed)
     setDescription(found?.description?.trim() || '')
     setStep('form')
