@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { beepSuccess, beepNotFound } from '../beep'
+import { beepSuccess } from '../beep'
 
 export default function BarcodeScanner({ onDetected, itemList }) {
   const videoRef = useRef(null)
@@ -15,11 +15,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   }
 
   function handleCode(code) {
-    if (isInList(code)) {
-      beepSuccess()
-    } else {
-      beepNotFound()
-    }
+    if (isInList(code)) beepSuccess()
     onDetected(code)
   }
 
