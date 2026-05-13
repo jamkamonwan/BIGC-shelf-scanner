@@ -1,0 +1,133 @@
+import { useState } from 'react'
+import { SCRIPT_URL } from '../config'
+
+export default function DimensionForm({ barcode, description, setDescription, onSaved, onRescan }) {
+  const [width, setWidth] = useState('')
+  const [depth, setDepth] = useState('')
+  const [height, setHeight] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [savedOk, setSavedOk] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  async function handleSave() {
+    if (!width || !depth || !height) {
+      setSaveError('Please fill in all three dimensions.')
+      return
+    }
+
+    if (!SCRIPT_URL) {
+      setSaveError('Apps Script URL not configured in src/config.js.')
+      return
+    }
+
+    setSaving(true)
+    setSaveError(null)
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          barcode,
+          description,
+          width: parseFloat(width),
+          depth: parseFloat(depth),
+          height: parseFloat(height),
+        }),
+      })
+      setSavedOk(true)
+      setTimeout(() => onSaved(), 1200)
+    } catch (err) {
+      setSaveError('Failed to save. Check your connection.')
+      setSaving(false)
+    }
+  }
+
+  if (savedOk) {
+    return (
+      <div className="form-screen center">
+        <div className="saved-badge">Saved!</div>
+        <p className="muted">Ready for next item…</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="form-screen">
+      <div className="barcode-display">
+        <span className="barcode-label">Barcode</span>
+        <span className="barcode-value">{barcode}</span>
+        <button className="btn-ghost small" onClick={onRescan}>Re-scan</button>
+      </div>
+
+      <div className="field">
+        <label htmlFor="desc">Description <span className="muted">(optional)</span></label>
+        <input
+          id="desc"
+          className="input"
+          type="text"
+          placeholder="e.g. Snack box 200g"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="dims-grid">
+        <div className="field">
+          <label htmlFor="width">Width (cm)</label>
+          <input
+            id="width"
+            className="input dim-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0"
+            value={width}
+            onChange={(e) => setWidth(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="depth">Depth (cm)</label>
+          <input
+            id="depth"
+            className="input dim-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0"
+            value={depth}
+            onChange={(e) => setDepth(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="height">Height (cm)</label>
+          <input
+            id="height"
+            className="input dim-input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {saveError && <p className="error-msg">{saveError}</p>}
+
+      <button
+        className="btn-primary btn-save"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? 'Saving…' : 'Save to Sheet'}
+      </button>
+    </div>
+  )
+}
