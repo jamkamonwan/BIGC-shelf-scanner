@@ -3,12 +3,18 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyaEY8PdmGmAVRrTIZJS
 module.exports = async function handler(req, res) {
   const params = new URLSearchParams({ action: 'save', ...req.query })
   const url = `${SCRIPT_URL}?${params}`
+
   const response = await fetch(url)
   const text = await response.text()
-  try {
-    const data = JSON.parse(text)
-    res.status(200).json(data)
-  } catch (e) {
-    res.status(200).json({ ok: false, error: `Apps Script returned: ${text.slice(0, 200)}` })
+
+  let data
+  try { data = JSON.parse(text) } catch (e) {
+    return res.status(200).json({ ok: false, error: `Non-JSON response: ${text.slice(0, 300)}` })
   }
+
+  if (Array.isArray(data)) {
+    return res.status(200).json({ ok: false, error: 'Apps Script not updated — redeploy with new version' })
+  }
+
+  res.status(200).json(data)
 }
