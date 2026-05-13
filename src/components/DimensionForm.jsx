@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { SCRIPT_URL } from '../config'
 
 export default function DimensionForm({ barcode, description, setDescription, onSaved, onRescan }) {
   const [width, setWidth] = useState('')
@@ -16,17 +15,11 @@ export default function DimensionForm({ barcode, description, setDescription, on
       return
     }
 
-    if (!SCRIPT_URL) {
-      setSaveError('Apps Script URL not configured in src/config.js.')
-      return
-    }
-
     setSaving(true)
     setSaveError(null)
 
     try {
       const params = new URLSearchParams({
-        action: 'save',
         barcode,
         description,
         width: parseFloat(width),
@@ -34,7 +27,7 @@ export default function DimensionForm({ barcode, description, setDescription, on
         height: parseFloat(height),
         weight: parseFloat(weight),
       })
-      const res = await fetch(`${SCRIPT_URL}?${params}`)
+      const res = await fetch(`/api/save?${params}`)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || 'Script returned error')
       setSavedOk(true)
