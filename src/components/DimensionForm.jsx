@@ -34,11 +34,13 @@ export default function DimensionForm({ barcode, description, setDescription, on
         height: parseFloat(height),
         weight: parseFloat(weight),
       })
-      await fetch(`${SCRIPT_URL}?${params}`, { mode: 'no-cors' })
+      const res = await fetch(`${SCRIPT_URL}?${params}`)
+      const json = await res.json()
+      if (!json.ok) throw new Error('Script returned error')
       setSavedOk(true)
       setTimeout(() => onSaved(), 1200)
     } catch (err) {
-      setSaveError('Failed to save. Check your connection.')
+      setSaveError(`Failed to save: ${err.message}`)
       setSaving(false)
     }
   }
