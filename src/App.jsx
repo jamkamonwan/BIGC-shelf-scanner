@@ -24,11 +24,14 @@ export default function App() {
   }, [retryCount])
 
   function handleDetected(code) {
+    const trimmed = code.trim()
     const found = itemList?.find(
-      (item) => item.barcode === code || item.articleCode === code
+      (item) =>
+        item.barcode.trim() === trimmed ||
+        item.articleCode.trim() === trimmed
     )
-    setBarcode(code)
-    setDescription(found?.description || '')
+    setBarcode(trimmed)
+    setDescription(found?.description?.trim() || '')
     setStep('form')
   }
 

@@ -61,7 +61,10 @@ export default function DimensionForm({ barcode, description, setDescription, on
       </div>
 
       <div className="field">
-        <label htmlFor="desc">Description <span className="muted">(optional)</span></label>
+        <label htmlFor="desc">
+          Description{' '}
+          {description ? <span className="muted">(from sheet)</span> : <span className="muted">(optional)</span>}
+        </label>
         <input
           id="desc"
           className="input"
@@ -69,6 +72,7 @@ export default function DimensionForm({ barcode, description, setDescription, on
           placeholder="e.g. Snack box 200g"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          style={description ? { background: '#f0fdf4', borderColor: '#22c55e' } : {}}
         />
       </div>
 
