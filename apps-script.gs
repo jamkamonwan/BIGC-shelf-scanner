@@ -25,6 +25,7 @@ function doPost(e) {
   const data = sheet.getDataRange().getValues();
   const identifier = String(payload.barcode).trim();
 
+  let found = false;
   for (let i = 1; i < data.length; i++) {
     const barcode = String(data[i][0]).trim();
     const articleCode = String(data[i][1]).trim();
@@ -34,8 +35,21 @@ function doPost(e) {
       sheet.getRange(row, 5).setValue(payload.width);   // E = Width
       sheet.getRange(row, 6).setValue(payload.height);  // F = Height
       sheet.getRange(row, 7).setValue(payload.weight);  // G = Weight
+      found = true;
       break;
     }
+  }
+
+  if (!found) {
+    sheet.appendRow([
+      identifier,           // A = Barcode
+      '',                   // B = Article Code
+      payload.description,  // C = Description
+      payload.depth,        // D = Depth
+      payload.width,        // E = Width
+      payload.height,       // F = Height
+      payload.weight,       // G = Weight
+    ]);
   }
 
   return ContentService
