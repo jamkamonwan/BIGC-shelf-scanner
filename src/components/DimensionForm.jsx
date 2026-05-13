@@ -25,19 +25,16 @@ export default function DimensionForm({ barcode, description, setDescription, on
     setSaveError(null)
 
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          barcode,
-          description,
-          width: parseFloat(width),
-          depth: parseFloat(depth),
-          height: parseFloat(height),
-          weight: parseFloat(weight),
-        }),
+      const params = new URLSearchParams({
+        action: 'save',
+        barcode,
+        description,
+        width: parseFloat(width),
+        depth: parseFloat(depth),
+        height: parseFloat(height),
+        weight: parseFloat(weight),
       })
+      await fetch(`${SCRIPT_URL}?${params}`, { mode: 'no-cors' })
       setSavedOk(true)
       setTimeout(() => onSaved(), 1200)
     } catch (err) {
