@@ -12,6 +12,27 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const [engine, setEngine]         = useState(null) // 'native' | 'zxing'
   const [manualBarcode, setManualBarcode] = useState('')
   const [showManual, setShowManual] = useState(false)
+  const [torchOn, setTorchOn]           = useState(false)
+  const [torchSupported, setTorchSupported] = useState(false)
+  const trackRef = useRef(null)
+
+  function initTorch(stream) {
+    const track = stream?.getVideoTracks?.()?.[0]
+    if (!track) return
+    trackRef.current = track
+    const caps = track.getCapabilities?.() || {}
+    if (caps.torch) setTorchSupported(true)
+  }
+
+  async function toggleTorch() {
+    const track = trackRef.current
+    if (!track) return
+    const next = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] })
+      setTorchOn(next)
+    } catch (_) {}
+  }
 
   function isInList(code) {
     if (!Array.isArray(itemList)) return false
@@ -46,6 +67,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
         await video.play()
         setReady(true)
         setEngine('native')
+        initTorch(stream)
 
         const allFormats = await BarcodeDetector.getSupportedFormats()
         const want = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','itf','data_matrix']
@@ -95,7 +117,10 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             }
           }
         )
-        .then(() => setReady(true))
+        .then(() => {
+          setReady(true)
+          initTorch(video.srcObject)
+        })
         .catch((err) => setError(err.message))
     }
 
@@ -104,6 +129,9 @@ export default function BarcodeScanner({ onDetected, itemList }) {
       if (animRef.current) cancelAnimationFrame(animRef.current)
       controlsRef.current?.stop()
       if (video?.srcObject) video.srcObject.getTracks().forEach(t => t.stop())
+      trackRef.current = null
+      setTorchOn(false)
+      setTorchSupported(false)
     }
   }, [onDetected, itemList])
 
@@ -134,6 +162,22 @@ export default function BarcodeScanner({ onDetected, itemList }) {
           }}>
             HD scan
           </div>
+        )}
+        {torchSupported && (
+          <button
+            onClick={toggleTorch}
+            style={{
+              position: 'absolute', bottom: 12, left: 12,
+              background: torchOn ? '#fde047' : 'rgba(0,0,0,0.55)',
+              border: 'none', borderRadius: 8,
+              padding: '8px 14px', fontSize: 20, cursor: 'pointer',
+              color: torchOn ? '#000' : '#fff',
+              lineHeight: 1,
+            }}
+            aria-label={torchOn ? 'Turn off flash' : 'Turn on flash'}
+          >
+            {torchOn ? '🔦' : '🔦'}
+          </button>
         )}
       </div>
 
