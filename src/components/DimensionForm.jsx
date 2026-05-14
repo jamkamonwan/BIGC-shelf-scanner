@@ -36,16 +36,18 @@ export default function DimensionForm({
       setSaveError('Scientific notation (e.g. 1E+10) is not allowed. Enter a plain number.')
       return
     }
-    const w = parseFloat(width)
-    const h = parseFloat(height)
-    const d = parseFloat(depth)
-    const wt = weight.trim() !== '' ? parseFloat(weight) : 0
+    const round1 = (v) => Math.round(v * 10) / 10
+    const round3 = (v) => Math.round(v * 1000) / 1000
+    const w  = round1(parseFloat(width))
+    const h  = round1(parseFloat(height))
+    const d  = round1(parseFloat(depth))
+    const wt = weight.trim() !== '' ? round3(parseFloat(weight)) : 0
     if (isNaN(w) || isNaN(h) || isNaN(d)) {
       setSaveError('W, H, and D must be valid numbers.')
       return
     }
-    if (w <= 0 || h <= 0 || d <= 0) {
-      setSaveError('W, H, and D must be greater than 0.')
+    if (w < 0.1 || h < 0.1 || d < 0.1) {
+      setSaveError('W, H, and D must be at least 0.1 cm.')
       return
     }
     if (w > 500 || h > 500 || d > 500) {
@@ -54,6 +56,10 @@ export default function DimensionForm({
     }
     if (weight.trim() !== '' && (isNaN(wt) || wt < 0)) {
       setSaveError('Weight must be a number ≥ 0 (e.g. 0.5). Remove it or enter a valid value.')
+      return
+    }
+    if (weight.trim() !== '' && wt > 0 && wt < 0.001) {
+      setSaveError('Weight must be at least 0.001 kg (1 g) or leave blank.')
       return
     }
     if (weight.trim() !== '' && wt > 999) {
