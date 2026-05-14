@@ -137,10 +137,9 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   }, [onDetected, itemList])
 
   function validateBarcode(val) {
-    if (val.length < 3)           return 'Barcode must be at least 3 characters.'
-    if (val.length > 50)          return 'Barcode too long (max 50 characters).'
-    if (!/^[A-Za-z0-9\-\.\/]+$/.test(val))
-      return 'Barcode may only contain letters, numbers, - . /'
+    if (!/^\d+$/.test(val))       return 'Barcode must contain numbers only.'
+    if (val.length < 3)           return 'Barcode must be at least 3 digits.'
+    if (val.length > 20)          return 'Barcode too long (max 20 digits).'
     return null
   }
 
@@ -212,7 +211,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             <input
               className="input"
               type="text"
-              inputMode="text"
+              inputMode="numeric"
               placeholder="e.g. 8850329213719"
               value={manualBarcode}
               onChange={handleManualChange}
