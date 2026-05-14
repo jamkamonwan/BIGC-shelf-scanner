@@ -12,6 +12,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const [engine, setEngine]         = useState(null) // 'native' | 'zxing'
   const [manualBarcode, setManualBarcode] = useState('')
   const [showManual, setShowManual] = useState(false)
+  const [manualError, setManualError] = useState(null)
   const [torchOn, setTorchOn]           = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
   const trackRef = useRef(null)
@@ -135,10 +136,25 @@ export default function BarcodeScanner({ onDetected, itemList }) {
     }
   }, [onDetected, itemList])
 
+  function validateBarcode(val) {
+    if (val.length < 3)           return 'Barcode must be at least 3 characters.'
+    if (val.length > 50)          return 'Barcode too long (max 50 characters).'
+    if (!/^[A-Za-z0-9\-\.\/]+$/.test(val))
+      return 'Barcode may only contain letters, numbers, - . /'
+    return null
+  }
+
+  function handleManualChange(e) {
+    setManualBarcode(e.target.value)
+    setManualError(null)
+  }
+
   function handleManualSubmit(e) {
     e.preventDefault()
     const val = manualBarcode.trim()
     if (!val) return
+    const err = validateBarcode(val)
+    if (err) { setManualError(err); return }
     fireDetected(val)
   }
 
@@ -196,12 +212,18 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             <input
               className="input"
               type="text"
-              inputMode="numeric"
-              placeholder="Type barcode or article code"
+              inputMode="text"
+              placeholder="e.g. 8850329213719"
               value={manualBarcode}
-              onChange={(e) => setManualBarcode(e.target.value)}
+              onChange={handleManualChange}
               autoFocus
+              style={manualError ? { borderColor: '#ef4444' } : {}}
             />
+            {manualError && (
+              <p style={{ color: '#ef4444', fontSize: 13, margin: '4px 0 0' }}>
+                {manualError}
+              </p>
+            )}
             <button type="submit" className="btn-primary" disabled={!manualBarcode.trim()}>
               Use this barcode
             </button>
