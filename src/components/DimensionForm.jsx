@@ -31,14 +31,30 @@ export default function DimensionForm({
       setSaveError('W, H, and D are required.')
       return
     }
+    const w = parseFloat(width)
+    const h = parseFloat(height)
+    const d = parseFloat(depth)
+    const wt = weight ? parseFloat(weight) : 0
+    if (w <= 0 || h <= 0 || d <= 0) {
+      setSaveError('W, H, and D must be greater than 0.')
+      return
+    }
+    if (isNaN(w) || isNaN(h) || isNaN(d)) {
+      setSaveError('W, H, and D must be valid numbers.')
+      return
+    }
+    if (weight && (isNaN(wt) || wt < 0)) {
+      setSaveError('Weight must be 0 or greater.')
+      return
+    }
 
     const data = {
       barcode,
       description,
-      width:  parseFloat(width),
-      depth:  parseFloat(depth),
-      height: parseFloat(height),
-      weight: weight ? parseFloat(weight) : 0,
+      width:  w,
+      depth:  d,
+      height: h,
+      weight: wt,
     }
 
     // Queue the save (works offline) then flush in background
