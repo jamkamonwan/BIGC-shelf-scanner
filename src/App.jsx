@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import BarcodeScanner from './components/BarcodeScanner'
 import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 import { flushQueue, getPendingCount } from './saveQueue'
 
-const CACHE_KEY = 'shelf_scanner_items_v2'
+const CACHE_KEY    = 'shelf_scanner_items_v2'
+const CACHE_TS_KEY = 'shelf_scanner_items_ts'
+const STALE_MS     = 2 * 60 * 1000 // 2 minutes
+
+function loadCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') } catch { return null }
+}
+
+function cacheAge() {
+  const ts = parseInt(localStorage.getItem(CACHE_TS_KEY) || '0', 10)
+  return ts ? Date.now() - ts : Infinity
+}
 
 export default function App() {
   const [step, setStep] = useState('scan')
@@ -12,40 +23,59 @@ export default function App() {
   const [description, setDescription] = useState('')
   const [foundItem, setFoundItem] = useState(null)
   const [listError, setListError] = useState(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
   const [pendingCount, setPendingCount] = useState(getPendingCount)
+  const [itemList, setItemList] = useState(loadCache)
 
-  const [itemList, setItemList] = useState(() => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY)
-      return cached ? JSON.parse(cached) : null
-    } catch { return null }
-  })
+  const fetchingRef = useRef(false)
 
-  // Fetch fresh item list
-  useEffect(() => {
-    if (!SCRIPT_URL) { setListError('Apps Script URL not configured.'); return }
+  const fetchList = useCallback(() => {
+    if (!SCRIPT_URL || fetchingRef.current) return
+    fetchingRef.current = true
+    setRefreshing(true)
     setListError(null)
+
     fetch(SCRIPT_URL)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setItemList(data)
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch {}
-        } else if (!itemList) {
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+            localStorage.setItem(CACHE_TS_KEY, String(Date.now()))
+          } catch {}
+        } else if (!loadCache()) {
           setListError(data.error || 'Unexpected response.')
         }
       })
-      .catch(() => { if (!itemList) setListError('Failed to load item list.') })
-  }, [retryCount])
+      .catch(() => { if (!loadCache()) setListError('Failed to load item list.') })
+      .finally(() => { fetchingRef.current = false; setRefreshing(false) })
+  }, [])
+
+  // Fetch on mount
+  useEffect(() => { fetchList() }, [])
+
+  // Refresh when user comes back to the tab/app
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && cacheAge() > STALE_MS) {
+        fetchList()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [fetchList])
 
   // Flush offline queue on mount and when coming back online
   useEffect(() => {
     flushQueue().then(() => setPendingCount(getPendingCount()))
-    const handleOnline = () => flushQueue().then(() => setPendingCount(getPendingCount()))
+    const handleOnline = () => {
+      flushQueue().then(() => setPendingCount(getPendingCount()))
+      if (cacheAge() > STALE_MS) fetchList()
+    }
     window.addEventListener('online', handleOnline)
     return () => window.removeEventListener('online', handleOnline)
-  }, [])
+  }, [fetchList])
 
   function handleDetected(code) {
     const trimmed = code.trim()
@@ -67,7 +97,7 @@ export default function App() {
     setDescription('')
     setFoundItem(null)
     setStep('scan')
-    setRetryCount((n) => n + 1)
+    fetchList()
     setTimeout(() => setPendingCount(getPendingCount()), 2000)
   }
 
@@ -84,7 +114,7 @@ export default function App() {
         {header}
         <div className="form-screen center">
           <p className="error-msg">{listError}</p>
-          <button className="btn-primary" onClick={() => setRetryCount((n) => n + 1)}>Retry</button>
+          <button className="btn-primary" onClick={fetchList}>Retry</button>
         </div>
       </div>
     )
@@ -111,6 +141,15 @@ export default function App() {
           textAlign: 'center', padding: '6px 12px',
         }}>
           ⏳ {pendingCount} save{pendingCount > 1 ? 's' : ''} pending — will sync when online
+        </div>
+      )}
+
+      {refreshing && (
+        <div style={{
+          background: '#eff6ff', color: '#1d4ed8', fontSize: 12,
+          textAlign: 'center', padding: '4px 12px',
+        }}>
+          🔄 Updating item list…
         </div>
       )}
 
