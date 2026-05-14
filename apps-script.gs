@@ -1,17 +1,12 @@
 // Paste this entire file into Google Apps Script (Extensions > Apps Script)
-// Then: Deploy > New deployment > Web app
-//   Execute as: Me
-//   Who has access: Anyone
-// Copy the Web App URL and paste it into src/config.js
+// Then: Deploy > Manage deployments > pencil > New version > Deploy
 
 function doGet(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('Itemlist');
-
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Itemlist');
     if (!sheet) {
       return ContentService
-        .createTextOutput(JSON.stringify({ ok: false, error: 'Sheet named "Itemlist" not found. Check tab name.' }))
+        .createTextOutput(JSON.stringify({ ok: false, error: 'Sheet "Itemlist" not found' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -23,10 +18,8 @@ function doGet(e) {
       const width       = parseFloat(e.parameter.width)  || 0;
       const height      = parseFloat(e.parameter.height) || 0;
       const weight      = parseFloat(e.parameter.weight) || 0;
-
       const data = sheet.getDataRange().getValues();
       let found = false;
-
       for (let i = 1; i < data.length; i++) {
         const barcode     = String(data[i][0]).trim();
         const articleCode = String(data[i][1]).trim();
@@ -40,24 +33,28 @@ function doGet(e) {
           break;
         }
       }
-
       if (!found) {
         sheet.appendRow([identifier, '', description, depth, width, height, weight]);
       }
-
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // List mode
+    // List mode — returns items including existing dimension values
     const data = sheet.getDataRange().getValues();
     const items = [];
     for (let i = 1; i < data.length; i++) {
       const barcode     = String(data[i][0]).trim();
       const articleCode = String(data[i][1]).trim();
       const description = String(data[i][2]).trim();
-      if (barcode || articleCode) items.push({ barcode, articleCode, description });
+      const depth       = data[i][3] !== '' ? data[i][3] : '';
+      const width       = data[i][4] !== '' ? data[i][4] : '';
+      const height      = data[i][5] !== '' ? data[i][5] : '';
+      const weight      = data[i][6] !== '' ? data[i][6] : '';
+      if (barcode || articleCode) {
+        items.push({ barcode, articleCode, description, depth, width, height, weight });
+      }
     }
     return ContentService
       .createTextOutput(JSON.stringify(items))
@@ -70,13 +67,10 @@ function doGet(e) {
   }
 }
 
-// Run this function directly in Apps Script editor to test writing to sheet
+// Run this in Apps Script editor to test sheet write
 function testSave() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Itemlist');
-  if (!sheet) {
-    Logger.log('ERROR: Sheet "Itemlist" not found');
-    return;
-  }
+  if (!sheet) { Logger.log('ERROR: Sheet not found'); return; }
   sheet.appendRow(['TEST_BARCODE', '', 'Test Item', 10, 20, 30, 0.5]);
-  Logger.log('SUCCESS: Row appended');
+  Logger.log('SUCCESS');
 }

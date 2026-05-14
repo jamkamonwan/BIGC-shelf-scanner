@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
-export default function DimensionForm({ barcode, description, setDescription, onSaved, onRescan }) {
-  const [width, setWidth] = useState('')
-  const [depth, setDepth] = useState('')
-  const [height, setHeight] = useState('')
-  const [weight, setWeight] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [savedOk, setSavedOk] = useState(false)
+export default function DimensionForm({
+  barcode, description, setDescription,
+  initialWidth, initialHeight, initialDepth, initialWeight,
+  onSaved, onRescan,
+}) {
+  const [width,  setWidth]  = useState(initialWidth  !== '' ? String(initialWidth)  : '')
+  const [height, setHeight] = useState(initialHeight !== '' ? String(initialHeight) : '')
+  const [depth,  setDepth]  = useState(initialDepth  !== '' ? String(initialDepth)  : '')
+  const [weight, setWeight] = useState(initialWeight !== '' ? String(initialWeight) : '')
+  const [saving,   setSaving]   = useState(false)
+  const [savedOk,  setSavedOk]  = useState(false)
   const [saveError, setSaveError] = useState(null)
 
+  const widthRef  = useRef()
+  const heightRef = useRef()
+  const depthRef  = useRef()
+  const weightRef = useRef()
+  const saveRef   = useRef()
+
+  // Press Enter to jump to next field
+  const advance = (nextRef) => (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); nextRef.current?.focus() }
+  }
+
   async function handleSave() {
-    if (!width || !depth || !height || !weight) {
-      setSaveError('Please fill in all dimensions and weight.')
+    if (!width || !height || !depth) {
+      setSaveError('W, H, and D are required.')
       return
     }
 
@@ -22,16 +37,16 @@ export default function DimensionForm({ barcode, description, setDescription, on
       const params = new URLSearchParams({
         barcode,
         description,
-        width: parseFloat(width),
-        depth: parseFloat(depth),
+        width:  parseFloat(width),
+        depth:  parseFloat(depth),
         height: parseFloat(height),
-        weight: parseFloat(weight),
+        weight: weight ? parseFloat(weight) : 0,
       })
-      const res = await fetch(`/api/save?${params}`)
+      const res  = await fetch(`/api/save?${params}`)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || 'Script returned error')
       setSavedOk(true)
-      setTimeout(() => onSaved(), 1200)
+      setTimeout(() => onSaved(), 800)
     } catch (err) {
       setSaveError(`Failed to save: ${err.message}`)
       setSaving(false)
@@ -47,6 +62,8 @@ export default function DimensionForm({ barcode, description, setDescription, on
     )
   }
 
+  const fromSheet = !!description
+
   return (
     <div className="form-screen">
       <div className="barcode-display">
@@ -58,7 +75,9 @@ export default function DimensionForm({ barcode, description, setDescription, on
       <div className="field">
         <label htmlFor="desc">
           Description{' '}
-          {description ? <span className="muted">(from sheet)</span> : <span className="muted">(optional)</span>}
+          {fromSheet
+            ? <span className="muted">(from sheet)</span>
+            : <span className="muted">(optional)</span>}
         </label>
         <input
           id="desc"
@@ -67,14 +86,15 @@ export default function DimensionForm({ barcode, description, setDescription, on
           placeholder="e.g. Snack box 200g"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={description ? { background: '#f0fdf4', borderColor: '#22c55e' } : {}}
+          style={fromSheet ? { background: '#f0fdf4', borderColor: '#22c55e', color: '#14532d' } : {}}
         />
       </div>
 
       <div className="dims-grid">
         <div className="field">
-          <label htmlFor="width">W (cm)</label>
+          <label htmlFor="width">W (cm) <span style={{color:'#ef4444'}}>*</span></label>
           <input
+            ref={widthRef}
             id="width"
             className="input dim-input"
             type="number"
@@ -84,12 +104,14 @@ export default function DimensionForm({ barcode, description, setDescription, on
             placeholder="0.0"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
+            onKeyDown={advance(heightRef)}
             autoFocus
           />
         </div>
         <div className="field">
-          <label htmlFor="height">H (cm)</label>
+          <label htmlFor="height">H (cm) <span style={{color:'#ef4444'}}>*</span></label>
           <input
+            ref={heightRef}
             id="height"
             className="input dim-input"
             type="number"
@@ -99,11 +121,13 @@ export default function DimensionForm({ barcode, description, setDescription, on
             placeholder="0.0"
             value={height}
             onChange={(e) => setHeight(e.target.value)}
+            onKeyDown={advance(depthRef)}
           />
         </div>
         <div className="field">
-          <label htmlFor="depth">D (cm)</label>
+          <label htmlFor="depth">D (cm) <span style={{color:'#ef4444'}}>*</span></label>
           <input
+            ref={depthRef}
             id="depth"
             className="input dim-input"
             type="number"
@@ -113,13 +137,15 @@ export default function DimensionForm({ barcode, description, setDescription, on
             placeholder="0.0"
             value={depth}
             onChange={(e) => setDepth(e.target.value)}
+            onKeyDown={advance(weightRef)}
           />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="weight">Weight (kg) <span className="muted">e.g. 0.01</span></label>
+        <label htmlFor="weight">Weight (kg) <span className="muted">optional — e.g. 0.01</span></label>
         <input
+          ref={weightRef}
           id="weight"
           className="input"
           type="number"
@@ -129,12 +155,14 @@ export default function DimensionForm({ barcode, description, setDescription, on
           placeholder="0.01"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
+          onKeyDown={advance(saveRef)}
         />
       </div>
 
       {saveError && <p className="error-msg">{saveError}</p>}
 
       <button
+        ref={saveRef}
         className="btn-primary btn-save"
         onClick={handleSave}
         disabled={saving}

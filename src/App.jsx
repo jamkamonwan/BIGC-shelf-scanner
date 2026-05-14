@@ -3,17 +3,27 @@ import BarcodeScanner from './components/BarcodeScanner'
 import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 
+const CACHE_KEY = 'shelf_scanner_items'
+
 export default function App() {
   const [step, setStep] = useState('scan')
   const [barcode, setBarcode] = useState('')
   const [description, setDescription] = useState('')
-  const [itemList, setItemList] = useState(null)
+  const [foundItem, setFoundItem] = useState(null)
   const [listError, setListError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
 
+  // Load from cache instantly, then refresh in background
+  const [itemList, setItemList] = useState(() => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      return cached ? JSON.parse(cached) : null
+    } catch { return null }
+  })
+
   useEffect(() => {
     if (!SCRIPT_URL) {
-      setListError('Apps Script URL not configured in src/config.js.')
+      setListError('Apps Script URL not configured.')
       return
     }
     setListError(null)
@@ -22,11 +32,12 @@ export default function App() {
       .then((data) => {
         if (Array.isArray(data)) {
           setItemList(data)
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch {}
         } else {
-          setListError(data.error || 'Unexpected response from server.')
+          if (!itemList) setListError(data.error || 'Unexpected response from server.')
         }
       })
-      .catch(() => setListError('Failed to load item list. Check your connection.'))
+      .catch(() => { if (!itemList) setListError('Failed to load item list.') })
   }, [retryCount])
 
   function handleDetected(code) {
@@ -40,12 +51,14 @@ export default function App() {
       : null
     setBarcode(trimmed)
     setDescription(found?.description?.trim() || '')
+    setFoundItem(found || null)
     setStep('form')
   }
 
   function handleSaved() {
     setBarcode('')
     setDescription('')
+    setFoundItem(null)
     setStep('scan')
   }
 
@@ -56,17 +69,15 @@ export default function App() {
     </header>
   )
 
-  if (listError) {
+  if (listError && !itemList) {
     return (
       <div className="app">
         {header}
         <div className="form-screen center">
           <p className="error-msg">{listError}</p>
-          {SCRIPT_URL && (
-            <button className="btn-primary" onClick={() => setRetryCount((n) => n + 1)}>
-              Retry
-            </button>
-          )}
+          <button className="btn-primary" onClick={() => setRetryCount((n) => n + 1)}>
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -93,9 +104,14 @@ export default function App() {
 
       {step === 'form' && (
         <DimensionForm
+          key={barcode}
           barcode={barcode}
           description={description}
           setDescription={setDescription}
+          initialWidth={foundItem?.width ?? ''}
+          initialHeight={foundItem?.height ?? ''}
+          initialDepth={foundItem?.depth ?? ''}
+          initialWeight={foundItem?.weight ?? ''}
           onSaved={handleSaved}
           onRescan={() => setStep('scan')}
         />
