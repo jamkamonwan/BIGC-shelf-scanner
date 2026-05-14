@@ -47,6 +47,15 @@ export default function DimensionForm({
       setSaveError('Weight must be a number ≥ 0 (e.g. 0.5). Remove it or enter a valid value.')
       return
     }
+    const desc = description.trim()
+    if (desc.length > 100) {
+      setSaveError('Description must be 100 characters or less.')
+      return
+    }
+    if (desc && !/^[A-Za-z0-9฀-๿\s.,\-_()/]+$/.test(desc)) {
+      setSaveError('Description: letters, numbers, Thai text, and . , - _ ( ) / only. No emoji or symbols.')
+      return
+    }
 
     const data = {
       barcode,
