@@ -6,7 +6,7 @@ import { flushQueue, getPendingCount } from './saveQueue'
 
 const CACHE_KEY    = 'shelf_scanner_items_v2'
 const CACHE_TS_KEY = 'shelf_scanner_items_ts'
-const STALE_MS     = 2 * 60 * 1000 // 2 minutes
+const STALE_MS     = 30 * 1000 // 30 seconds (online-reconnect guard only)
 
 function loadCache() {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') } catch { return null }
@@ -55,12 +55,10 @@ export default function App() {
   // Fetch on mount
   useEffect(() => { fetchList() }, [])
 
-  // Refresh when user comes back to the tab/app
+  // Always refresh when user returns to the tab — sheet may have changed
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && cacheAge() > STALE_MS) {
-        fetchList()
-      }
+      if (document.visibilityState === 'visible') fetchList()
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
