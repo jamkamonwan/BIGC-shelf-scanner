@@ -33,24 +33,20 @@ export default function DimensionForm({
     setSaving(true)
     setSaveError(null)
 
-    try {
-      const params = new URLSearchParams({
-        barcode,
-        description,
-        width:  parseFloat(width),
-        depth:  parseFloat(depth),
-        height: parseFloat(height),
-        weight: weight ? parseFloat(weight) : 0,
-      })
-      const res  = await fetch(`/api/save?${params}`)
-      const json = await res.json()
-      if (!json.ok) throw new Error(json.error || 'Script returned error')
-      setSavedOk(true)
-      setTimeout(() => onSaved(), 800)
-    } catch (err) {
-      setSaveError(`Failed to save: ${err.message}`)
-      setSaving(false)
-    }
+    const params = new URLSearchParams({
+      barcode,
+      description,
+      width:  parseFloat(width),
+      depth:  parseFloat(depth),
+      height: parseFloat(height),
+      weight: weight ? parseFloat(weight) : 0,
+    })
+
+    // Show success immediately, save in background
+    setSavedOk(true)
+    setTimeout(() => onSaved(), 600)
+
+    fetch(`/api/save?${params}`).catch(() => {})
   }
 
   if (savedOk) {
