@@ -34,17 +34,17 @@ export default function DimensionForm({
     const w = parseFloat(width)
     const h = parseFloat(height)
     const d = parseFloat(depth)
-    const wt = weight ? parseFloat(weight) : 0
-    if (w <= 0 || h <= 0 || d <= 0) {
-      setSaveError('W, H, and D must be greater than 0.')
-      return
-    }
+    const wt = weight.trim() !== '' ? parseFloat(weight) : 0
     if (isNaN(w) || isNaN(h) || isNaN(d)) {
       setSaveError('W, H, and D must be valid numbers.')
       return
     }
-    if (weight && (isNaN(wt) || wt < 0)) {
-      setSaveError('Weight must be 0 or greater.')
+    if (w <= 0 || h <= 0 || d <= 0) {
+      setSaveError('W, H, and D must be greater than 0.')
+      return
+    }
+    if (weight.trim() !== '' && (isNaN(wt) || wt < 0)) {
+      setSaveError('Weight must be a number ≥ 0 (e.g. 0.5). Remove it or enter a valid value.')
       return
     }
 
