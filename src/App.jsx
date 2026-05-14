@@ -3,7 +3,7 @@ import BarcodeScanner from './components/BarcodeScanner'
 import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 
-const CACHE_KEY = 'shelf_scanner_items'
+const CACHE_KEY = 'shelf_scanner_items_v2'
 
 export default function App() {
   const [step, setStep] = useState('scan')
