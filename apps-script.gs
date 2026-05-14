@@ -35,6 +35,9 @@ function doGet(e) {
       }
       if (!found) {
         sheet.appendRow([identifier, '', description, depth, width, height, weight]);
+        // Force plain text on barcode + article code to preserve leading zeros
+        const newRow = sheet.getLastRow();
+        sheet.getRange(newRow, 1, 1, 2).setNumberFormat('@');
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))

@@ -165,6 +165,7 @@ export default function App() {
           initialHeight={foundItem?.height ?? ''}
           initialDepth={foundItem?.depth ?? ''}
           initialWeight={foundItem?.weight ?? ''}
+          foundItem={foundItem}
           onSaved={handleSaved}
           onRescan={() => setStep('scan')}
         />

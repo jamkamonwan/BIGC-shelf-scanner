@@ -4,17 +4,32 @@ import { enqueue, flushQueue, recordSave, getLastSaveMinutes } from '../saveQueu
 export default function DimensionForm({
   barcode, description, setDescription,
   initialWidth, initialHeight, initialDepth, initialWeight,
+  foundItem,
   onSaved, onRescan,
 }) {
-  const [width,  setWidth]  = useState(initialWidth  !== '' ? String(initialWidth)  : '')
-  const [height, setHeight] = useState(initialHeight !== '' ? String(initialHeight) : '')
-  const [depth,  setDepth]  = useState(initialDepth  !== '' ? String(initialDepth)  : '')
-  const [weight, setWeight] = useState(initialWeight !== '' ? String(initialWeight) : '')
-  const [savedOk,   setSavedOk]   = useState(false)
+  const initW   = initialWidth  !== '' ? String(initialWidth)  : ''
+  const initH   = initialHeight !== '' ? String(initialHeight) : ''
+  const initD   = initialDepth  !== '' ? String(initialDepth)  : ''
+  const initWt  = initialWeight !== '' ? String(initialWeight) : ''
+
+  const [width,  setWidth]  = useState(initW)
+  const [height, setHeight] = useState(initH)
+  const [depth,  setDepth]  = useState(initD)
+  const [weight, setWeight] = useState(initWt)
+  const [savedOk,   setSavedOk]   = useState(false) // false | 'saved' | 'queued'
   const [saveError, setSaveError] = useState(null)
+
+  // Capture initial description at mount (description prop is live parent state)
+  const initDescRef = useRef(description)
 
   // Duplicate detection — check once on mount
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
+
+  // Disable Save if existing item and nothing has changed
+  const isExisting = !!foundItem
+  const unchanged  = isExisting &&
+    width === initW && height === initH && depth === initD &&
+    weight === initWt && description === initDescRef.current
 
   const widthRef  = useRef()
   const heightRef = useRef()
@@ -90,11 +105,21 @@ export default function DimensionForm({
     recordSave(barcode)
     flushQueue()
 
-    setSavedOk(true)
-    setTimeout(() => onSaved(), 600)
+    const offline = !navigator.onLine
+    setSavedOk(offline ? 'queued' : 'saved')
+    setTimeout(() => onSaved(), offline ? 1500 : 600)
   }
 
-  if (savedOk) {
+  if (savedOk === 'queued') {
+    return (
+      <div className="form-screen center">
+        <div className="saved-badge" style={{ background: '#fef3c7', color: '#92400e' }}>Queued</div>
+        <p className="muted">No internet — will sync automatically when back online</p>
+      </div>
+    )
+  }
+
+  if (savedOk === 'saved') {
     return (
       <div className="form-screen center">
         <div className="saved-badge">Saved!</div>
@@ -182,10 +207,18 @@ export default function DimensionForm({
 
       {saveError && <p className="error-msg">{saveError}</p>}
 
+      {unchanged && (
+        <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', margin: '4px 0' }}>
+          No changes — edit a value to enable Save
+        </p>
+      )}
+
       <button
         ref={saveRef}
         className="btn-primary btn-save"
         onClick={handleSave}
+        disabled={unchanged}
+        style={unchanged ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
       >
         Save to Sheet
       </button>
