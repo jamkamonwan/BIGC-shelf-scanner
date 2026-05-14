@@ -60,6 +60,7 @@ export default function App() {
     setDescription('')
     setFoundItem(null)
     setStep('scan')
+    setRetryCount((n) => n + 1)
   }
 
   const header = (
