@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import BarcodeScanner from './components/BarcodeScanner'
 import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
+import { flushQueue, getPendingCount } from './saveQueue'
 
 const CACHE_KEY = 'shelf_scanner_items_v2'
 
@@ -12,8 +13,8 @@ export default function App() {
   const [foundItem, setFoundItem] = useState(null)
   const [listError, setListError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [pendingCount, setPendingCount] = useState(getPendingCount)
 
-  // Load from cache instantly, then refresh in background
   const [itemList, setItemList] = useState(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
@@ -21,11 +22,9 @@ export default function App() {
     } catch { return null }
   })
 
+  // Fetch fresh item list
   useEffect(() => {
-    if (!SCRIPT_URL) {
-      setListError('Apps Script URL not configured.')
-      return
-    }
+    if (!SCRIPT_URL) { setListError('Apps Script URL not configured.'); return }
     setListError(null)
     fetch(SCRIPT_URL)
       .then((res) => res.json())
@@ -33,12 +32,20 @@ export default function App() {
         if (Array.isArray(data)) {
           setItemList(data)
           try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch {}
-        } else {
-          if (!itemList) setListError(data.error || 'Unexpected response from server.')
+        } else if (!itemList) {
+          setListError(data.error || 'Unexpected response.')
         }
       })
       .catch(() => { if (!itemList) setListError('Failed to load item list.') })
   }, [retryCount])
+
+  // Flush offline queue on mount and when coming back online
+  useEffect(() => {
+    flushQueue().then(() => setPendingCount(getPendingCount()))
+    const handleOnline = () => flushQueue().then(() => setPendingCount(getPendingCount()))
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [])
 
   function handleDetected(code) {
     const trimmed = code.trim()
@@ -61,6 +68,7 @@ export default function App() {
     setFoundItem(null)
     setStep('scan')
     setRetryCount((n) => n + 1)
+    setTimeout(() => setPendingCount(getPendingCount()), 2000)
   }
 
   const header = (
@@ -76,9 +84,7 @@ export default function App() {
         {header}
         <div className="form-screen center">
           <p className="error-msg">{listError}</p>
-          <button className="btn-primary" onClick={() => setRetryCount((n) => n + 1)}>
-            Retry
-          </button>
+          <button className="btn-primary" onClick={() => setRetryCount((n) => n + 1)}>Retry</button>
         </div>
       </div>
     )
@@ -98,6 +104,15 @@ export default function App() {
   return (
     <div className="app">
       {header}
+
+      {pendingCount > 0 && (
+        <div style={{
+          background: '#fef3c7', color: '#92400e', fontSize: 13,
+          textAlign: 'center', padding: '6px 12px',
+        }}>
+          ⏳ {pendingCount} save{pendingCount > 1 ? 's' : ''} pending — will sync when online
+        </div>
+      )}
 
       {step === 'scan' && (
         <BarcodeScanner onDetected={handleDetected} itemList={itemList} />
