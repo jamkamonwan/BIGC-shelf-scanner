@@ -31,6 +31,11 @@ export default function DimensionForm({
       setSaveError('W, H, and D are required.')
       return
     }
+    const hasSci = (v) => /[eE]/.test(v)
+    if (hasSci(width) || hasSci(height) || hasSci(depth) || hasSci(weight)) {
+      setSaveError('Scientific notation (e.g. 1E+10) is not allowed. Enter a plain number.')
+      return
+    }
     const w = parseFloat(width)
     const h = parseFloat(height)
     const d = parseFloat(depth)
@@ -43,8 +48,16 @@ export default function DimensionForm({
       setSaveError('W, H, and D must be greater than 0.')
       return
     }
+    if (w > 500 || h > 500 || d > 500) {
+      setSaveError('W, H, and D must be 500 cm or less.')
+      return
+    }
     if (weight.trim() !== '' && (isNaN(wt) || wt < 0)) {
       setSaveError('Weight must be a number ≥ 0 (e.g. 0.5). Remove it or enter a valid value.')
+      return
+    }
+    if (weight.trim() !== '' && wt > 999) {
+      setSaveError('Weight must be 999 kg or less.')
       return
     }
     const desc = description.trim()
