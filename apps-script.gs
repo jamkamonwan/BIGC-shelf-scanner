@@ -34,15 +34,18 @@ function doGet(e) {
           sheet.getRange(row, 5).setValue(width);
           sheet.getRange(row, 6).setValue(height);
           sheet.getRange(row, 7).setValue(weight);
+          sheet.getRange(row, 4, 1, 3).setNumberFormat('0.00');
+          sheet.getRange(row, 7).setNumberFormat('0.000');
           found = true;
           break;
         }
       }
       if (!found) {
         sheet.appendRow([identifier, '', description, depth, width, height, weight]);
-        // Force plain text on barcode + article code to preserve leading zeros
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 1, 1, 2).setNumberFormat('@');
+        sheet.getRange(newRow, 4, 1, 3).setNumberFormat('0.00');
+        sheet.getRange(newRow, 7).setNumberFormat('0.000');
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))

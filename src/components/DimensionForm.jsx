@@ -72,9 +72,9 @@ export default function DimensionForm({
       setSaveError('W, H, D ต้องไม่เกิน 500 ซม.')
       return
     }
-    const round1 = (v) => Math.round(v * 10) / 10
+    const round2 = (v) => Math.round(v * 100) / 100
     const round3 = (v) => Math.round(v * 1000) / 1000
-    const w = round1(rawW), h = round1(rawH), d = round1(rawD)
+    const w = round2(rawW), h = round2(rawH), d = round2(rawD)
 
     const weightRaw = weight.trim()
     let wt = 0
@@ -188,7 +188,7 @@ export default function DimensionForm({
           <label htmlFor="width">W (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={widthRef} id="width" className="input dim-input"
-            type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
             onFocus={selectAll}
@@ -200,7 +200,7 @@ export default function DimensionForm({
           <label htmlFor="height">H (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={heightRef} id="height" className="input dim-input"
-            type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
             value={height}
             onChange={(e) => setHeight(e.target.value)}
             onFocus={selectAll}
@@ -212,7 +212,7 @@ export default function DimensionForm({
           <label htmlFor="depth">D (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={depthRef} id="depth" className="input dim-input"
-            type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
             value={depth}
             onChange={(e) => setDepth(e.target.value)}
             onFocus={selectAll}
