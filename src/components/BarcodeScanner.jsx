@@ -164,9 +164,9 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   }, [onDetected, itemList])
 
   function validateBarcode(val) {
-    if (!/^\d+$/.test(val))       return 'Barcode must contain numbers only.'
-    if (val.length < 3)           return 'Barcode must be at least 3 digits.'
-    if (val.length > 20)          return 'Barcode too long (max 20 digits).'
+    if (!/^\d+$/.test(val))       return 'บาร์โค้ดต้องเป็นตัวเลขเท่านั้น'
+    if (val.length < 3)           return 'บาร์โค้ดต้องมีอย่างน้อย 3 หลัก'
+    if (val.length > 20)          return 'บาร์โค้ดยาวเกินไป (สูงสุด 20 หลัก)'
     return null
   }
 
@@ -214,14 +214,14 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             background: 'rgba(0,0,0,0.35)', borderRadius: 4, padding: '2px 8px',
             whiteSpace: 'nowrap',
           }}>
-            Tap to focus
+            แตะเพื่อโฟกัส
           </div>
         )}
         {!ready && !error && (
-          <div className="scanner-status">Starting camera…</div>
+          <div className="scanner-status">กำลังเปิดกล้อง…</div>
         )}
         {error && (
-          <div className="scanner-status error">Camera unavailable</div>
+          <div className="scanner-status error">เปิดกล้องไม่ได้</div>
         )}
         {ready && engine === 'native' && (
           <div style={{
@@ -242,21 +242,21 @@ export default function BarcodeScanner({ onDetected, itemList }) {
               color: torchOn ? '#000' : '#fff',
               lineHeight: 1,
             }}
-            aria-label={torchOn ? 'Turn off flash' : 'Turn on flash'}
+            aria-label={torchOn ? 'ปิดไฟ' : 'เปิดไฟ'}
           >
             🔦
           </button>
         )}
       </div>
 
-      <p className="scan-hint">Point camera at a barcode to scan</p>
+      <p className="scan-hint">ส่องกล้องไปที่บาร์โค้ด</p>
 
       <div className="manual-section">
         <button
           className="btn-ghost"
           onClick={() => setShowManual((v) => !v)}
         >
-          {showManual ? 'Hide manual entry' : 'Enter barcode manually'}
+          {showManual ? 'ซ่อนช่องกรอก' : 'กรอกบาร์โค้ดเอง'}
         </button>
 
         {showManual && (
@@ -265,7 +265,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
               className="input"
               type="text"
               inputMode="numeric"
-              placeholder="e.g. 8850329213719"
+              placeholder="เช่น 8850329213719"
               value={manualBarcode}
               onChange={handleManualChange}
               autoFocus
@@ -277,7 +277,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
               </p>
             )}
             <button type="submit" className="btn-primary" disabled={!manualBarcode.trim()}>
-              Use this barcode
+              ใช้บาร์โค้ดนี้
             </button>
           </form>
         )}

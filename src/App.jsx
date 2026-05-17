@@ -133,7 +133,7 @@ export default function App() {
         {header}
         <div className="form-screen center">
           <p className="error-msg">{listError}</p>
-          <button className="btn-primary" onClick={fetchList}>Retry</button>
+          <button className="btn-primary" onClick={fetchList}>ลองอีกครั้ง</button>
         </div>
       </div>
     )
@@ -144,7 +144,7 @@ export default function App() {
       <div className="app">
         {header}
         <div className="form-screen center">
-          <p className="muted">Loading item list…</p>
+          <p className="muted">กำลังโหลดรายการสินค้า…</p>
         </div>
       </div>
     )
@@ -159,7 +159,7 @@ export default function App() {
           background: '#fef3c7', color: '#92400e', fontSize: 13,
           textAlign: 'center', padding: '6px 12px',
         }}>
-          ⏳ {pendingCount} save{pendingCount > 1 ? 's' : ''} pending — will sync when online
+          ⏳ รอส่งข้อมูล {pendingCount} รายการ — จะซิงก์เมื่อออนไลน์
         </div>
       )}
 
@@ -168,7 +168,7 @@ export default function App() {
           background: '#eff6ff', color: '#1d4ed8', fontSize: 12,
           textAlign: 'center', padding: '4px 12px',
         }}>
-          🔄 Updating item list…
+          🔄 กำลังอัปเดตรายการสินค้า…
         </div>
       )}
 

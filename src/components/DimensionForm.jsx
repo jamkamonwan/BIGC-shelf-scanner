@@ -16,16 +16,12 @@ export default function DimensionForm({
   const [height, setHeight] = useState(initH)
   const [depth,  setDepth]  = useState(initD)
   const [weight, setWeight] = useState(initWt)
-  const [savedOk,   setSavedOk]   = useState(false) // false | 'saved' | 'queued'
+  const [savedOk,   setSavedOk]   = useState(false)
   const [saveError, setSaveError] = useState(null)
 
-  // Capture initial description at mount (description prop is live parent state)
   const initDescRef = useRef(description)
-
-  // Duplicate detection — check once on mount
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
 
-  // Disable Save if existing item and nothing has changed
   const isExisting = !!foundItem
   const unchanged  = isExisting &&
     width === initW && height === initH && depth === initD &&
@@ -41,76 +37,78 @@ export default function DimensionForm({
     if (e.key === 'Enter') { e.preventDefault(); nextRef.current?.focus() }
   }
 
+  // Select all on focus so typing replaces the old value immediately
+  const selectAll = (e) => e.target.select()
+
+  // Normalize .6 → 0.6 and 6. → 6 on blur
+  const normDecimal = (val, setter) => {
+    if (!val) return
+    let v = val
+    if (v.startsWith('.')) v = '0' + v
+    if (v.endsWith('.'))   v = v.slice(0, -1)
+    if (v !== val) setter(v)
+  }
+
   function handleSave() {
-    // 1. Required fields
     if (!width || !height || !depth) {
-      setSaveError('W, H, and D are required.')
+      setSaveError('กรุณากรอก W, H, และ D')
       return
     }
-
-    // 2. No scientific notation in dims
     const hasSci = (v) => /[eE]/.test(String(v))
     if (hasSci(width) || hasSci(height) || hasSci(depth)) {
-      setSaveError('Scientific notation (e.g. 1E+10) is not allowed. Enter a plain number.')
+      setSaveError('ไม่อนุญาตให้ใช้ scientific notation เช่น 1E+10')
       return
     }
-
-    // 3. Validate raw values before rounding (catches 0.05 → would round to 0.1 bypass)
     const rawW = parseFloat(width), rawH = parseFloat(height), rawD = parseFloat(depth)
     if (isNaN(rawW) || isNaN(rawH) || isNaN(rawD)) {
-      setSaveError('W, H, and D must be valid numbers.')
+      setSaveError('W, H, D ต้องเป็นตัวเลขที่ถูกต้อง')
       return
     }
     if (rawW < 0.1 || rawH < 0.1 || rawD < 0.1) {
-      setSaveError('W, H, and D must be at least 0.1 cm.')
+      setSaveError('W, H, D ต้องมีค่าอย่างน้อย 0.1 ซม.')
       return
     }
     if (rawW > 500 || rawH > 500 || rawD > 500) {
-      setSaveError('W, H, and D must be 500 cm or less.')
+      setSaveError('W, H, D ต้องไม่เกิน 500 ซม.')
       return
     }
-
-    // 4. Round dims
     const round1 = (v) => Math.round(v * 10) / 10
     const round3 = (v) => Math.round(v * 1000) / 1000
     const w = round1(rawW), h = round1(rawH), d = round1(rawD)
 
-    // 5. Weight — type="text" so we get the raw string (catches paste of "-", "abc", etc.)
     const weightRaw = weight.trim()
     let wt = 0
     if (weightRaw !== '') {
       if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
-        setSaveError('Weight must be a positive number (e.g. 0.5) or leave blank.')
+        setSaveError('น้ำหนักต้องเป็นตัวเลขบวก เช่น 0.5 หรือเว้นว่างไว้')
         return
       }
       wt = round3(parseFloat(weightRaw))
       if (wt === 0) {
-        setSaveError('Weight cannot be 0. Enter a value ≥ 0.001 kg or leave blank.')
+        setSaveError('น้ำหนักต้องมากกว่า 0 หรือเว้นว่างไว้')
         return
       }
       if (wt < 0.001) {
-        setSaveError('Weight must be at least 0.001 kg (1 g) or leave blank.')
+        setSaveError('น้ำหนักต้องมีค่าอย่างน้อย 0.001 กก. (1 กรัม) หรือเว้นว่างไว้')
         return
       }
       if (wt > 999) {
-        setSaveError('Weight must be 999 kg or less.')
+        setSaveError('น้ำหนักต้องไม่เกิน 999 กก.')
         return
       }
     }
 
-    // 6. Description
     const desc = description.trim()
     if (desc.length > 100) {
-      setSaveError('Description must be 100 characters or less.')
+      setSaveError('ชื่อสินค้าต้องไม่เกิน 100 ตัวอักษร')
       return
     }
     if (desc && !/^[A-Za-z0-9฀-๿\s.,\-_()/]+$/.test(desc)) {
-      setSaveError('Description: letters, numbers, Thai text, and . , - _ ( ) / only. No emoji or symbols.')
+      setSaveError('ชื่อสินค้า: ใช้ได้เฉพาะตัวอักษร ตัวเลข ภาษาไทย และ . , - _ ( ) /')
       return
     }
 
     const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt }
-
     enqueue(data)
     recordSave(barcode)
     flushQueue()
@@ -123,8 +121,8 @@ export default function DimensionForm({
   if (savedOk === 'queued') {
     return (
       <div className="form-screen center">
-        <div className="saved-badge" style={{ background: '#fef3c7', color: '#92400e' }}>Queued</div>
-        <p className="muted">No internet — will sync automatically when back online</p>
+        <div className="saved-badge" style={{ background: '#fef3c7', color: '#92400e' }}>รอส่งข้อมูล</div>
+        <p className="muted">ไม่มีอินเทอร์เน็ต — จะซิงก์อัตโนมัติเมื่อออนไลน์</p>
       </div>
     )
   }
@@ -132,8 +130,8 @@ export default function DimensionForm({
   if (savedOk === 'saved') {
     return (
       <div className="form-screen center">
-        <div className="saved-badge">Saved!</div>
-        <p className="muted">Ready for next item…</p>
+        <div className="saved-badge">บันทึกแล้ว!</div>
+        <p className="muted">พร้อมสแกนรายการถัดไป…</p>
       </div>
     )
   }
@@ -147,28 +145,38 @@ export default function DimensionForm({
           background: '#fef3c7', color: '#92400e', borderRadius: 8,
           padding: '8px 12px', marginBottom: 8, fontSize: 13,
         }}>
-          ⚠️ This item was saved {dupMinutes} min ago — editing existing values
+          ⚠️ บันทึกรายการนี้ไปแล้ว {dupMinutes} นาที — กำลังแก้ไขข้อมูลเดิม
         </div>
       )}
 
       <div className="barcode-display">
-        <span className="barcode-label">Barcode</span>
+        <span className="barcode-label">บาร์โค้ด</span>
         <span className="barcode-value">{barcode}</span>
-        <button className="btn-ghost small" onClick={onRescan}>Re-scan</button>
+        <button
+          onClick={onRescan}
+          style={{
+            border: '1.5px solid #3b82f6', color: '#3b82f6',
+            borderRadius: 6, padding: '4px 12px',
+            background: 'transparent', cursor: 'pointer',
+            fontSize: 13, fontWeight: 500,
+          }}
+        >
+          สแกนใหม่
+        </button>
       </div>
 
       <div className="field">
         <label htmlFor="desc">
-          Description{' '}
+          ชื่อสินค้า{' '}
           {fromSheet
-            ? <span className="muted">(from sheet)</span>
-            : <span className="muted">(optional)</span>}
+            ? <span className="muted">(จากชีต)</span>
+            : <span className="muted">(ไม่บังคับ)</span>}
         </label>
         <input
           id="desc"
           className="input"
           type="text"
-          placeholder="e.g. Snack box 200g"
+          placeholder="เช่น ขนม 200g"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           style={fromSheet ? { background: '#f0fdf4', borderColor: '#22c55e', color: '#14532d' } : {}}
@@ -177,40 +185,52 @@ export default function DimensionForm({
 
       <div className="dims-grid">
         <div className="field">
-          <label htmlFor="width">W (cm) <span style={{ color: '#ef4444' }}>*</span></label>
+          <label htmlFor="width">W (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={widthRef} id="width" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
-            value={width} onChange={(e) => setWidth(e.target.value)}
+            value={width}
+            onChange={(e) => setWidth(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(width, setWidth)}
             onKeyDown={advance(heightRef)} autoFocus
           />
         </div>
         <div className="field">
-          <label htmlFor="height">H (cm) <span style={{ color: '#ef4444' }}>*</span></label>
+          <label htmlFor="height">H (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={heightRef} id="height" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
-            value={height} onChange={(e) => setHeight(e.target.value)}
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(height, setHeight)}
             onKeyDown={advance(depthRef)}
           />
         </div>
         <div className="field">
-          <label htmlFor="depth">D (cm) <span style={{ color: '#ef4444' }}>*</span></label>
+          <label htmlFor="depth">D (ซม.) <span style={{ color: '#ef4444' }}>*</span></label>
           <input
             ref={depthRef} id="depth" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.1" placeholder="0.0"
-            value={depth} onChange={(e) => setDepth(e.target.value)}
+            value={depth}
+            onChange={(e) => setDepth(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(depth, setDepth)}
             onKeyDown={advance(weightRef)}
           />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="weight">Weight (kg) <span className="muted">optional — e.g. 0.01</span></label>
+        <label htmlFor="weight">น้ำหนัก (กก.) <span className="muted">ไม่บังคับ เช่น 0.01</span></label>
         <input
           ref={weightRef} id="weight" className="input"
           type="text" inputMode="decimal" placeholder="0.01"
-          value={weight} onChange={(e) => setWeight(e.target.value)}
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          onFocus={selectAll}
+          onBlur={() => normDecimal(weight, setWeight)}
           onKeyDown={advance(saveRef)}
         />
       </div>
@@ -219,7 +239,7 @@ export default function DimensionForm({
 
       {unchanged && (
         <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', margin: '4px 0' }}>
-          No changes — edit a value to enable Save
+          ไม่มีการเปลี่ยนแปลง — แก้ไขค่าก่อนบันทึก
         </p>
       )}
 
@@ -230,7 +250,7 @@ export default function DimensionForm({
         disabled={unchanged}
         style={unchanged ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
       >
-        Save to Sheet
+        บันทึก
       </button>
     </div>
   )
