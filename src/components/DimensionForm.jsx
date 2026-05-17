@@ -42,45 +42,63 @@ export default function DimensionForm({
   }
 
   function handleSave() {
+    // 1. Required fields
     if (!width || !height || !depth) {
       setSaveError('W, H, and D are required.')
       return
     }
-    const hasSci = (v) => /[eE]/.test(v)
-    if (hasSci(width) || hasSci(height) || hasSci(depth) || hasSci(weight)) {
+
+    // 2. No scientific notation in dims
+    const hasSci = (v) => /[eE]/.test(String(v))
+    if (hasSci(width) || hasSci(height) || hasSci(depth)) {
       setSaveError('Scientific notation (e.g. 1E+10) is not allowed. Enter a plain number.')
       return
     }
-    const round1 = (v) => Math.round(v * 10) / 10
-    const round3 = (v) => Math.round(v * 1000) / 1000
-    const w  = round1(parseFloat(width))
-    const h  = round1(parseFloat(height))
-    const d  = round1(parseFloat(depth))
-    const wt = weight.trim() !== '' ? round3(parseFloat(weight)) : 0
-    if (isNaN(w) || isNaN(h) || isNaN(d)) {
+
+    // 3. Validate raw values before rounding (catches 0.05 → would round to 0.1 bypass)
+    const rawW = parseFloat(width), rawH = parseFloat(height), rawD = parseFloat(depth)
+    if (isNaN(rawW) || isNaN(rawH) || isNaN(rawD)) {
       setSaveError('W, H, and D must be valid numbers.')
       return
     }
-    if (w < 0.1 || h < 0.1 || d < 0.1) {
+    if (rawW < 0.1 || rawH < 0.1 || rawD < 0.1) {
       setSaveError('W, H, and D must be at least 0.1 cm.')
       return
     }
-    if (w > 500 || h > 500 || d > 500) {
+    if (rawW > 500 || rawH > 500 || rawD > 500) {
       setSaveError('W, H, and D must be 500 cm or less.')
       return
     }
-    if (weight.trim() !== '' && (isNaN(wt) || wt < 0)) {
-      setSaveError('Weight must be a number ≥ 0 (e.g. 0.5). Remove it or enter a valid value.')
-      return
+
+    // 4. Round dims
+    const round1 = (v) => Math.round(v * 10) / 10
+    const round3 = (v) => Math.round(v * 1000) / 1000
+    const w = round1(rawW), h = round1(rawH), d = round1(rawD)
+
+    // 5. Weight — type="text" so we get the raw string (catches paste of "-", "abc", etc.)
+    const weightRaw = weight.trim()
+    let wt = 0
+    if (weightRaw !== '') {
+      if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
+        setSaveError('Weight must be a positive number (e.g. 0.5) or leave blank.')
+        return
+      }
+      wt = round3(parseFloat(weightRaw))
+      if (wt === 0) {
+        setSaveError('Weight cannot be 0. Enter a value ≥ 0.001 kg or leave blank.')
+        return
+      }
+      if (wt < 0.001) {
+        setSaveError('Weight must be at least 0.001 kg (1 g) or leave blank.')
+        return
+      }
+      if (wt > 999) {
+        setSaveError('Weight must be 999 kg or less.')
+        return
+      }
     }
-    if (weight.trim() !== '' && wt > 0 && wt < 0.001) {
-      setSaveError('Weight must be at least 0.001 kg (1 g) or leave blank.')
-      return
-    }
-    if (weight.trim() !== '' && wt > 999) {
-      setSaveError('Weight must be 999 kg or less.')
-      return
-    }
+
+    // 6. Description
     const desc = description.trim()
     if (desc.length > 100) {
       setSaveError('Description must be 100 characters or less.')
@@ -91,23 +109,15 @@ export default function DimensionForm({
       return
     }
 
-    const data = {
-      barcode,
-      description,
-      width:  w,
-      depth:  d,
-      height: h,
-      weight: wt,
-    }
+    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt }
 
-    // Queue the save (works offline) then flush in background
     enqueue(data)
     recordSave(barcode)
     flushQueue()
 
     const offline = !navigator.onLine
     setSavedOk(offline ? 'queued' : 'saved')
-    setTimeout(() => onSaved(), offline ? 1500 : 600)
+    setTimeout(() => onSaved(data), offline ? 1500 : 600)
   }
 
   if (savedOk === 'queued') {
@@ -199,7 +209,7 @@ export default function DimensionForm({
         <label htmlFor="weight">Weight (kg) <span className="muted">optional — e.g. 0.01</span></label>
         <input
           ref={weightRef} id="weight" className="input"
-          type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.01"
+          type="text" inputMode="decimal" placeholder="0.01"
           value={weight} onChange={(e) => setWeight(e.target.value)}
           onKeyDown={advance(saveRef)}
         />

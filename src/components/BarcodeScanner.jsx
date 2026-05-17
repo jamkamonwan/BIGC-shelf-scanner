@@ -13,16 +13,26 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const [manualBarcode, setManualBarcode] = useState('')
   const [showManual, setShowManual] = useState(false)
   const [manualError, setManualError] = useState(null)
-  const [torchOn, setTorchOn]           = useState(false)
+  const [torchOn, setTorchOn]               = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
+  const [tapFocusSupported, setTapFocusSupported] = useState(false)
+  const [focusPoint, setFocusPoint]         = useState(null)
   const trackRef = useRef(null)
 
-  function initTorch(stream) {
+  async function initTrack(stream) {
     const track = stream?.getVideoTracks?.()?.[0]
     if (!track) return
     trackRef.current = track
     const caps = track.getCapabilities?.() || {}
     if (caps.torch) setTorchSupported(true)
+    // Enable continuous autofocus
+    if (caps.focusMode?.includes('continuous')) {
+      try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }) } catch (_) {}
+    }
+    // Tap-to-focus
+    if (caps.focusMode?.includes('manual') && caps.pointsOfInterest) {
+      setTapFocusSupported(true)
+    }
   }
 
   async function toggleTorch() {
@@ -32,6 +42,22 @@ export default function BarcodeScanner({ onDetected, itemList }) {
     try {
       await track.applyConstraints({ advanced: [{ torch: next }] })
       setTorchOn(next)
+    } catch (_) {}
+  }
+
+  async function handleVideoTap(e) {
+    const track = trackRef.current
+    if (!track || !tapFocusSupported) return
+    const rect = videoRef.current.getBoundingClientRect()
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
+    setFocusPoint({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setTimeout(() => setFocusPoint(null), 800)
+    try {
+      await track.applyConstraints({ advanced: [{ focusMode: 'manual', pointsOfInterest: [{ x, y }] }] })
+      setTimeout(async () => {
+        try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }) } catch (_) {}
+      }, 2000)
     } catch (_) {}
   }
 
@@ -68,7 +94,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
         await video.play()
         setReady(true)
         setEngine('native')
-        initTorch(stream)
+        initTrack(stream)
 
         const allFormats = await BarcodeDetector.getSupportedFormats()
         const want = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','itf','data_matrix']
@@ -97,7 +123,6 @@ export default function BarcodeScanner({ onDetected, itemList }) {
         animRef.current = requestAnimationFrame(tick)
 
       } catch (err) {
-        // Native failed — fall back to ZXing
         startZXing(video)
       }
     }
@@ -120,7 +145,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
         )
         .then(() => {
           setReady(true)
-          initTorch(video.srcObject)
+          initTrack(video.srcObject)
         })
         .catch((err) => setError(err.message))
     }
@@ -133,6 +158,8 @@ export default function BarcodeScanner({ onDetected, itemList }) {
       trackRef.current = null
       setTorchOn(false)
       setTorchSupported(false)
+      setTapFocusSupported(false)
+      setFocusPoint(null)
     }
   }, [onDetected, itemList])
 
@@ -160,10 +187,36 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   return (
     <div className="scanner-screen">
       <div className="video-wrapper">
-        <video ref={videoRef} className="scanner-video" playsInline muted />
+        <video
+          ref={videoRef}
+          className="scanner-video"
+          playsInline
+          muted
+          onClick={handleVideoTap}
+          style={{ cursor: tapFocusSupported ? 'crosshair' : 'default' }}
+        />
         <div className="scan-overlay">
           <div className="scan-frame" />
         </div>
+        {focusPoint && (
+          <div style={{
+            position: 'absolute',
+            left: focusPoint.x - 22, top: focusPoint.y - 22,
+            width: 44, height: 44,
+            border: '2px solid #fde047', borderRadius: 4,
+            pointerEvents: 'none',
+          }} />
+        )}
+        {tapFocusSupported && ready && (
+          <div style={{
+            position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+            fontSize: 11, color: 'rgba(255,255,255,0.65)',
+            background: 'rgba(0,0,0,0.35)', borderRadius: 4, padding: '2px 8px',
+            whiteSpace: 'nowrap',
+          }}>
+            Tap to focus
+          </div>
+        )}
         {!ready && !error && (
           <div className="scanner-status">Starting camera…</div>
         )}
@@ -191,7 +244,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             }}
             aria-label={torchOn ? 'Turn off flash' : 'Turn on flash'}
           >
-            {torchOn ? '🔦' : '🔦'}
+            🔦
           </button>
         )}
       </div>

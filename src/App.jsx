@@ -90,7 +90,28 @@ export default function App() {
     setStep('form')
   }
 
-  function handleSaved() {
+  function handleSaved(savedData) {
+    // Update local list immediately so rescanning the same item shows new values
+    if (savedData) {
+      setItemList(prev => {
+        if (!Array.isArray(prev)) return prev
+        const idx = prev.findIndex(item =>
+          (item.barcode || '').trim() === savedData.barcode ||
+          (item.articleCode || '').trim() === savedData.barcode
+        )
+        if (idx === -1) {
+          return [...prev, {
+            barcode: savedData.barcode, articleCode: '',
+            description: savedData.description,
+            depth: savedData.depth, width: savedData.width,
+            height: savedData.height, weight: savedData.weight,
+          }]
+        }
+        const next = [...prev]
+        next[idx] = { ...next[idx], ...savedData }
+        return next
+      })
+    }
     setBarcode('')
     setDescription('')
     setFoundItem(null)

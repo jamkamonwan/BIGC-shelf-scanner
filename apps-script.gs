@@ -18,13 +18,18 @@ function doGet(e) {
       const width       = parseFloat(e.parameter.width)  || 0;
       const height      = parseFloat(e.parameter.height) || 0;
       const weight      = parseFloat(e.parameter.weight) || 0;
+      // Strip leading zeros for comparison (handles Sheets stripping them from numeric barcodes)
+      const strip0 = (s) => s.replace(/^0+/, '') || s;
+      const normId = strip0(identifier);
       const data = sheet.getDataRange().getValues();
       let found = false;
       for (let i = 1; i < data.length; i++) {
         const barcode     = String(data[i][0]).trim();
         const articleCode = String(data[i][1]).trim();
-        if (barcode === identifier || articleCode === identifier) {
+        if (barcode === identifier || articleCode === identifier ||
+            strip0(barcode) === normId || strip0(articleCode) === normId) {
           const row = i + 1;
+          sheet.getRange(row, 3).setValue(description);
           sheet.getRange(row, 4).setValue(depth);
           sheet.getRange(row, 5).setValue(width);
           sheet.getRange(row, 6).setValue(height);
