@@ -19,7 +19,8 @@ function doGet(e) {
       const height      = parseFloat(e.parameter.height) || 0;
       const weight      = parseFloat(e.parameter.weight) || 0;
       const hanger      = e.parameter.hanger === 'true';
-      const remark      = String(e.parameter.remark || '').trim();
+      const remark      = String(e.parameter.remark    || '').trim();
+      const username    = String(e.parameter.username  || '').trim();
       // Strip leading zeros for comparison (handles Sheets stripping them from numeric barcodes)
       const strip0 = (s) => s.replace(/^0+/, '') || s;
       const normId = strip0(identifier);
@@ -39,6 +40,7 @@ function doGet(e) {
           sheet.getRange(row, 8).setValue(new Date());
           sheet.getRange(row, 9).setValue(hanger);
           sheet.getRange(row, 10).setValue(remark);
+          sheet.getRange(row, 11).setValue(username);
           sheet.getRange(row, 4, 1, 3).setNumberFormat('0.00');
           sheet.getRange(row, 7).setNumberFormat('0.000');
           sheet.getRange(row, 8).setNumberFormat('dd/mm/yyyy hh:mm');
@@ -50,7 +52,7 @@ function doGet(e) {
         }
       }
       if (!found) {
-        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date(), hanger, remark]);
+        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date(), hanger, remark, username]);
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 1, 1, 2).setNumberFormat('@');
         sheet.getRange(newRow, 4, 1, 3).setNumberFormat('0.00');

@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { enqueue, flushQueue, recordSave, getLastSaveMinutes } from '../saveQueue'
 
+const USERNAME_KEY = 'shelf_scanner_username'
+
 export default function DimensionForm({
   barcode, description, setDescription,
   initialWidth, initialHeight, initialDepth, initialWeight,
@@ -19,10 +21,19 @@ export default function DimensionForm({
   const [height,   setHeight]   = useState(initH)
   const [depth,    setDepth]    = useState(initD)
   const [weight,   setWeight]   = useState(initWt)
-  const [isHanger, setIsHanger] = useState(initHanger)
-  const [remark,   setRemark]   = useState(initRemark)
+  const [isHanger,  setIsHanger]  = useState(initHanger)
+  const [remark,    setRemark]    = useState(initRemark)
+  const [username,  setUsername]  = useState(() => {
+    try { return localStorage.getItem(USERNAME_KEY) || '' } catch { return '' }
+  })
   const [savedOk,   setSavedOk]   = useState(false)
   const [saveError, setSaveError] = useState(null)
+
+  function handleUsernameChange(e) {
+    const val = e.target.value
+    setUsername(val)
+    try { localStorage.setItem(USERNAME_KEY, val) } catch {}
+  }
 
   const initDescRef   = useRef(description)
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
@@ -56,6 +67,10 @@ export default function DimensionForm({
   }
 
   function handleSave() {
+    if (!username.trim()) {
+      setSaveError('กรุณากรอกชื่อผู้บันทึก')
+      return
+    }
     if (!width || !height || !depth) {
       setSaveError('กรุณากรอก W, H, และ D')
       return
@@ -120,7 +135,7 @@ export default function DimensionForm({
       return
     }
 
-    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt, hanger: isHanger, remark: remarkVal }
+    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt, hanger: isHanger, remark: remarkVal, username: username.trim() }
     enqueue(data)
     recordSave(barcode)
     flushQueue()
@@ -160,6 +175,21 @@ export default function DimensionForm({
           ⚠️ บันทึกรายการนี้ไปแล้ว {dupMinutes} นาที — กำลังแก้ไขข้อมูลเดิม
         </div>
       )}
+
+      <div className="field" style={{ marginBottom: 6 }}>
+        <label htmlFor="username" style={{ fontSize: 13 }}>
+          ชื่อผู้บันทึก <span style={{ color: '#ef4444' }}>*</span>
+        </label>
+        <input
+          id="username"
+          className="input"
+          type="text"
+          placeholder="กรอกชื่อของคุณ"
+          value={username}
+          onChange={handleUsernameChange}
+          style={{ fontSize: 14 }}
+        />
+      </div>
 
       <div className="barcode-display">
         <span className="barcode-label">บาร์โค้ด</span>
