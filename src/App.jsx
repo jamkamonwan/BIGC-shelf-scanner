@@ -175,9 +175,14 @@ export default function App() {
     ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
     : remaining
   const barcodeQuery = barcodeSearch.trim()
-  const visibleItems = barcodeQuery
+  const visibleItems = (barcodeQuery
     ? divFiltered.filter(item => (item.barcode || '').includes(barcodeQuery))
     : divFiltered
+  ).slice().sort((a, b) => {
+    const dept = (a.department || '').localeCompare(b.department || '')
+    if (dept !== 0) return dept
+    return (a.cls || '').localeCompare(b.cls || '')
+  })
 
   const tabBar = step !== 'form' && (
     <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#fff' }}>
