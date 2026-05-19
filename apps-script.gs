@@ -18,6 +18,8 @@ function doGet(e) {
       const width       = parseFloat(e.parameter.width)  || 0;
       const height      = parseFloat(e.parameter.height) || 0;
       const weight      = parseFloat(e.parameter.weight) || 0;
+      const hanger      = e.parameter.hanger === 'true';
+      const remark      = String(e.parameter.remark || '').trim();
       // Strip leading zeros for comparison (handles Sheets stripping them from numeric barcodes)
       const strip0 = (s) => s.replace(/^0+/, '') || s;
       const normId = strip0(identifier);
@@ -35,20 +37,28 @@ function doGet(e) {
           sheet.getRange(row, 6).setValue(height);
           sheet.getRange(row, 7).setValue(weight);
           sheet.getRange(row, 8).setValue(new Date());
+          sheet.getRange(row, 9).setValue(hanger);
+          sheet.getRange(row, 10).setValue(remark);
           sheet.getRange(row, 4, 1, 3).setNumberFormat('0.00');
           sheet.getRange(row, 7).setNumberFormat('0.000');
           sheet.getRange(row, 8).setNumberFormat('dd/mm/yyyy hh:mm');
+          sheet.getRange(row, 9).setDataValidation(
+            SpreadsheetApp.newDataValidation().requireCheckbox().build()
+          );
           found = true;
           break;
         }
       }
       if (!found) {
-        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date()]);
+        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date(), hanger, remark]);
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 1, 1, 2).setNumberFormat('@');
         sheet.getRange(newRow, 4, 1, 3).setNumberFormat('0.00');
         sheet.getRange(newRow, 7).setNumberFormat('0.000');
         sheet.getRange(newRow, 8).setNumberFormat('dd/mm/yyyy hh:mm');
+        sheet.getRange(newRow, 9).setDataValidation(
+          SpreadsheetApp.newDataValidation().requireCheckbox().build()
+        );
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))
@@ -66,8 +76,10 @@ function doGet(e) {
       const width       = data[i][4] !== '' ? data[i][4] : '';
       const height      = data[i][5] !== '' ? data[i][5] : '';
       const weight      = data[i][6] !== '' ? data[i][6] : '';
+      const hanger      = data[i][8] === true;
+      const remark      = data[i][9] !== undefined ? String(data[i][9]).trim() : '';
       if (barcode || articleCode) {
-        items.push({ barcode, articleCode, description, depth, width, height, weight });
+        items.push({ barcode, articleCode, description, depth, width, height, weight, hanger, remark });
       }
     }
     return ContentService

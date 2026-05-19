@@ -4,6 +4,7 @@ import { enqueue, flushQueue, recordSave, getLastSaveMinutes } from '../saveQueu
 export default function DimensionForm({
   barcode, description, setDescription,
   initialWidth, initialHeight, initialDepth, initialWeight,
+  initialHanger, initialRemark,
   foundItem,
   onSaved, onRescan,
 }) {
@@ -11,21 +12,26 @@ export default function DimensionForm({
   const initH   = initialHeight !== '' ? String(initialHeight) : ''
   const initD   = initialDepth  !== '' ? String(initialDepth)  : ''
   const initWt  = initialWeight !== '' ? String(initialWeight) : ''
+  const initHanger = !!initialHanger
+  const initRemark = initialRemark || ''
 
-  const [width,  setWidth]  = useState(initW)
-  const [height, setHeight] = useState(initH)
-  const [depth,  setDepth]  = useState(initD)
-  const [weight, setWeight] = useState(initWt)
+  const [width,    setWidth]    = useState(initW)
+  const [height,   setHeight]   = useState(initH)
+  const [depth,    setDepth]    = useState(initD)
+  const [weight,   setWeight]   = useState(initWt)
+  const [isHanger, setIsHanger] = useState(initHanger)
+  const [remark,   setRemark]   = useState(initRemark)
   const [savedOk,   setSavedOk]   = useState(false)
   const [saveError, setSaveError] = useState(null)
 
-  const initDescRef = useRef(description)
+  const initDescRef   = useRef(description)
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
 
   const isExisting = !!foundItem
   const unchanged  = isExisting &&
     width === initW && height === initH && depth === initD &&
-    weight === initWt && description === initDescRef.current
+    weight === initWt && description === initDescRef.current &&
+    isHanger === initHanger && remark === initRemark
 
   const widthRef  = useRef()
   const heightRef = useRef()
@@ -108,7 +114,13 @@ export default function DimensionForm({
       return
     }
 
-    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt }
+    const remarkVal = remark.trim()
+    if (remarkVal.length > 200) {
+      setSaveError('หมายเหตุต้องไม่เกิน 200 ตัวอักษร')
+      return
+    }
+
+    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt, hanger: isHanger, remark: remarkVal }
     enqueue(data)
     recordSave(barcode)
     flushQueue()
@@ -232,6 +244,30 @@ export default function DimensionForm({
           onFocus={selectAll}
           onBlur={() => normDecimal(weight, setWeight)}
           onKeyDown={advance(saveRef)}
+        />
+      </div>
+
+      <div className="field" style={{ marginTop: 4 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+          <input
+            type="checkbox"
+            checked={isHanger}
+            onChange={(e) => setIsHanger(e.target.checked)}
+            style={{ width: 20, height: 20, accentColor: '#3b82f6', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: 15 }}>สินค้าแขวน (Hanger)</span>
+        </label>
+      </div>
+
+      <div className="field">
+        <label htmlFor="remark">หมายเหตุ <span className="muted">ไม่บังคับ</span></label>
+        <input
+          id="remark"
+          className="input"
+          type="text"
+          placeholder="เช่น สินค้า import, ราคาพิเศษ"
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
         />
       </div>
 
