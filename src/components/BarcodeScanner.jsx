@@ -17,6 +17,10 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const [torchSupported, setTorchSupported] = useState(false)
   const [tapFocusSupported, setTapFocusSupported] = useState(false)
   const [focusPoint, setFocusPoint]         = useState(null)
+  const [zoom, setZoom]           = useState(1)
+  const [zoomMin, setZoomMin]     = useState(1)
+  const [zoomMax, setZoomMax]     = useState(1)
+  const [zoomSupported, setZoomSupported] = useState(false)
   const trackRef = useRef(null)
 
   async function initTrack(stream) {
@@ -25,14 +29,37 @@ export default function BarcodeScanner({ onDetected, itemList }) {
     trackRef.current = track
     const caps = track.getCapabilities?.() || {}
     if (caps.torch) setTorchSupported(true)
-    // Enable continuous autofocus
-    if (caps.focusMode?.includes('continuous')) {
-      try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }) } catch (_) {}
+
+    // Zoom support
+    if (caps.zoom) {
+      setZoomSupported(true)
+      setZoomMin(caps.zoom.min ?? 1)
+      setZoomMax(caps.zoom.max ?? 1)
+      setZoom(caps.zoom.min ?? 1)
     }
+
+    // Prefer continuous autofocus; on some devices try macro first for close-up scanning
+    const modes = caps.focusMode || []
+    try {
+      if (modes.includes('continuous')) {
+        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] })
+      }
+    } catch (_) {}
+
     // Tap-to-focus
-    if (caps.focusMode?.includes('manual') && caps.pointsOfInterest) {
+    if (modes.includes('manual') && caps.pointsOfInterest) {
       setTapFocusSupported(true)
     }
+  }
+
+  async function applyZoom(level) {
+    const track = trackRef.current
+    if (!track) return
+    const clamped = Math.max(zoomMin, Math.min(zoomMax, level))
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: clamped }] })
+      setZoom(clamped)
+    } catch (_) {}
   }
 
   async function toggleTorch() {
@@ -160,6 +187,8 @@ export default function BarcodeScanner({ onDetected, itemList }) {
       setTorchSupported(false)
       setTapFocusSupported(false)
       setFocusPoint(null)
+      setZoom(1)
+      setZoomSupported(false)
     }
   }, [onDetected, itemList])
 
@@ -183,6 +212,8 @@ export default function BarcodeScanner({ onDetected, itemList }) {
     if (err) { setManualError(err); return }
     fireDetected(val)
   }
+
+  const zoomStep = zoomMax <= 2 ? 0.1 : zoomMax <= 5 ? 0.5 : 1
 
   return (
     <div className="scanner-screen">
@@ -231,6 +262,38 @@ export default function BarcodeScanner({ onDetected, itemList }) {
             HD scan
           </div>
         )}
+
+        {/* Zoom controls — shown when device supports zoom */}
+        {zoomSupported && ready && (
+          <div style={{
+            position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'rgba(0,0,0,0.55)', borderRadius: 20, padding: '4px 10px',
+          }}>
+            <button
+              onClick={() => applyZoom(zoom - zoomStep)}
+              disabled={zoom <= zoomMin}
+              style={{
+                background: 'none', border: 'none', color: '#fff', fontSize: 20,
+                lineHeight: 1, padding: '0 4px', cursor: 'pointer',
+                opacity: zoom <= zoomMin ? 0.3 : 1,
+              }}
+            >−</button>
+            <span style={{ color: '#fff', fontSize: 12, minWidth: 34, textAlign: 'center' }}>
+              {zoom.toFixed(1)}x
+            </span>
+            <button
+              onClick={() => applyZoom(zoom + zoomStep)}
+              disabled={zoom >= zoomMax}
+              style={{
+                background: 'none', border: 'none', color: '#fff', fontSize: 20,
+                lineHeight: 1, padding: '0 4px', cursor: 'pointer',
+                opacity: zoom >= zoomMax ? 0.3 : 1,
+              }}
+            >+</button>
+          </div>
+        )}
+
         {torchSupported && (
           <button
             onClick={toggleTorch}
@@ -249,7 +312,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
         )}
       </div>
 
-      <p className="scan-hint">ส่องกล้องไปที่บาร์โค้ด</p>
+      <p className="scan-hint">ส่องกล้องไปที่บาร์โค้ด{zoomSupported ? ' · ซูมได้ด้วยปุ่ม + / −' : ''}</p>
 
       <div className="manual-section">
         <button
