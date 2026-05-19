@@ -4,7 +4,7 @@ import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 import { flushQueue, getPendingCount } from './saveQueue'
 
-const CACHE_KEY    = 'shelf_scanner_items_v2'
+const CACHE_KEY    = 'shelf_scanner_items_v3'
 const CACHE_TS_KEY = 'shelf_scanner_items_ts'
 const STALE_MS     = 30 * 1000
 
