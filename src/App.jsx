@@ -4,7 +4,7 @@ import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 import { flushQueue, getPendingCount } from './saveQueue'
 
-const CACHE_KEY    = 'shelf_scanner_items_v3'
+const CACHE_KEY    = 'shelf_scanner_items_v4'
 const CACHE_TS_KEY = 'shelf_scanner_items_ts'
 const STALE_MS     = 30 * 1000
 
@@ -28,11 +28,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('scan') // 'scan' | 'list'
   const [selectedDiv, setSelectedDiv] = useState(null) // null = all divisions
   const [barcodeSearch, setBarcodeSearch] = useState('')
+  const [showCount, setShowCount] = useState(100)
   const [barcode, setBarcode]     = useState('')
   const [foundItem, setFoundItem]             = useState(null)
   const [notFoundBarcode, setNotFoundBarcode] = useState('')
   const [listError, setListError]             = useState(null)
   const [refreshing, setRefreshing]           = useState(false)
+  const [listLoading, setListLoading]         = useState(true)
   const [pendingCount, setPendingCount]       = useState(getPendingCount)
   const [itemList, setItemList]               = useState(loadCache)
 
@@ -49,15 +51,20 @@ export default function App() {
       .then((data) => {
         if (Array.isArray(data)) {
           setItemList(data)
+          setListLoading(false)
           try {
             localStorage.setItem(CACHE_KEY, JSON.stringify(data))
             localStorage.setItem(CACHE_TS_KEY, String(Date.now()))
           } catch {}
         } else if (!loadCache()) {
           setListError(data.error || 'Unexpected response.')
+          setListLoading(false)
         }
       })
-      .catch(() => { if (!loadCache()) setListError('Failed to load item list.') })
+      .catch(() => {
+        if (!loadCache()) setListError('Failed to load item list.')
+        setListLoading(false)
+      })
       .finally(() => { fetchingRef.current = false; setRefreshing(false) })
   }, [])
 
@@ -83,9 +90,11 @@ export default function App() {
 
   function handleDetected(code) {
     const trimmed = code.trim()
-    const found = Array.isArray(itemList)
-      ? itemList.find((item) => (item.barcode || '').trim() === trimmed)
-      : null
+    if (!Array.isArray(itemList)) {
+      // Still loading — can't look up yet; stay on scan screen
+      return
+    }
+    const found = itemList.find((item) => (item.barcode || '').trim() === trimmed)
     if (!found) {
       setNotFoundBarcode(trimmed)
       setStep('notfound')
@@ -149,16 +158,7 @@ export default function App() {
     )
   }
 
-  if (itemList === null) {
-    return (
-      <div className="app">
-        {header}
-        <div className="form-screen center">
-          <p className="muted">กำลังโหลดรายการสินค้า…</p>
-        </div>
-      </div>
-    )
-  }
+  // Don't block on loading — show scanner immediately, list tab shows its own spinner
 
   const remaining  = Array.isArray(itemList) ? itemList.filter(item => !itemHasDims(item)) : []
   const total      = Array.isArray(itemList) ? itemList.length : 0
@@ -268,6 +268,17 @@ export default function App() {
       {step === 'scan' && activeTab === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
+          {/* Loading spinner when data not yet available */}
+          {listLoading && !itemList && (
+            <div style={{ textAlign: 'center', padding: '64px 16px', color: '#6b7280' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+              <p style={{ fontSize: 15 }}>กำลังโหลดรายการสินค้า…</p>
+            </div>
+          )}
+
+          {/* List content — only when data is loaded */}
+          {itemList && <>
+
           {/* Summary bar */}
           <div style={{
             padding: '8px 16px', background: '#f9fafb',
@@ -292,7 +303,7 @@ export default function App() {
               WebkitOverflowScrolling: 'touch',
             }}>
               <button
-                onClick={() => { setSelectedDiv(null); setBarcodeSearch('') }}
+                onClick={() => { setSelectedDiv(null); setBarcodeSearch(''); setShowCount(100) }}
                 style={{
                   flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                   border: '1.5px solid',
@@ -310,7 +321,7 @@ export default function App() {
                 return (
                   <button
                     key={div}
-                    onClick={() => { setSelectedDiv(div); setBarcodeSearch('') }}
+                    onClick={() => { setSelectedDiv(div); setBarcodeSearch(''); setShowCount(100) }}
                     style={{
                       flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                       border: '1.5px solid',
@@ -334,7 +345,7 @@ export default function App() {
               inputMode="numeric"
               placeholder={selectedDiv ? `ค้นหาบาร์โค้ดใน ${selectedDiv}…` : 'ค้นหาบาร์โค้ด…'}
               value={barcodeSearch}
-              onChange={e => setBarcodeSearch(e.target.value)}
+              onChange={e => { setBarcodeSearch(e.target.value); setShowCount(100) }}
               style={{
                 width: '100%', boxSizing: 'border-box',
                 padding: '7px 12px', borderRadius: 8, fontSize: 14,
@@ -356,7 +367,8 @@ export default function App() {
                 </p>
               </div>
             ) : (
-              visibleItems.map((item, idx) => (
+              <>
+              {visibleItems.slice(0, showCount).map((item, idx) => (
                 <div
                   key={item.barcode || idx}
                   onClick={() => handleSelectItem(item)}
@@ -396,9 +408,26 @@ export default function App() {
                   </div>
                   <span style={{ color: '#9ca3af', fontSize: 18, marginLeft: 8 }}>›</span>
                 </div>
-              ))
+              ))}
+              {visibleItems.length > showCount && (
+                <div style={{ textAlign: 'center', padding: '16px' }}>
+                  <button
+                    onClick={() => setShowCount(c => c + 100)}
+                    style={{
+                      padding: '8px 24px', borderRadius: 8, fontSize: 14,
+                      border: '1.5px solid #d1d5db', background: '#fff',
+                      cursor: 'pointer', color: '#374151',
+                    }}
+                  >
+                    โหลดเพิ่ม ({visibleItems.length - showCount} รายการที่เหลือ)
+                  </button>
+                </div>
+              )}
+              </>
             )}
           </div>
+
+          </>}
         </div>
       )}
 
