@@ -115,8 +115,8 @@ export default function DimensionForm({
     }
 
     const remarkVal = remark.trim()
-    if (remarkVal.length > 200) {
-      setSaveError('หมายเหตุต้องไม่เกิน 200 ตัวอักษร')
+    if (remarkVal.length > 300) {
+      setSaveError('หมายเหตุต้องไม่เกิน 300 ตัวอักษร')
       return
     }
 
