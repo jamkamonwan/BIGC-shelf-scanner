@@ -158,7 +158,19 @@ export default function App() {
     )
   }
 
-  // Don't block on loading — show scanner immediately, list tab shows its own spinner
+  // No cache — show loading screen so scanner doesn't fire before items are ready
+  if (!itemList) {
+    return (
+      <div className="app">
+        {header}
+        <div className="form-screen center">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+          <p style={{ fontSize: 16, fontWeight: 600, color: '#374151' }}>กำลังโหลดข้อมูลสินค้า…</p>
+          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>รอสักครู่ ครั้งต่อไปจะเร็วขึ้น</p>
+        </div>
+      </div>
+    )
+  }
 
   const remaining  = Array.isArray(itemList) ? itemList.filter(item => !itemHasDims(item)) : []
   const total      = Array.isArray(itemList) ? itemList.length : 0
