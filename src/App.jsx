@@ -457,6 +457,8 @@ export default function App() {
           initialPkgDepth={foundItem?.pkgDepth ?? ''}
           initialPkgWidth={foundItem?.pkgWidth ?? ''}
           initialPkgHeight={foundItem?.pkgHeight ?? ''}
+          initialDimUsername={foundItem?.dimUsername ?? ''}
+          initialWeightUsername={foundItem?.weightUsername ?? ''}
           foundItem={foundItem}
           onSaved={handleSaved}
           onRescan={() => { setStep('scan'); setActiveTab('scan') }}

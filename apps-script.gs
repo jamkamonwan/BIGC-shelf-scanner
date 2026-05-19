@@ -1,12 +1,13 @@
 // Paste this entire file into Google Apps Script (Extensions > Apps Script)
 // Then: Deploy > Manage deployments > pencil > New version > Deploy
 //
-// Sheet column layout (Itemlist tab) — NO Article Code column:
+// Sheet column layout (Itemlist tab):
 // A(1)=Division   B(2)=Department   C(3)=Class
 // D(4)=Barcode    E(5)=Description
 // F(6)=ProdDepth  G(7)=ProdWidth    H(8)=ProdHeight   I(9)=NetWeight
-// J(10)=DateTime  K(11)=Hanger      L(12)=Remark(legacy)  M(13)=Username
+// J(10)=DateTime  K(11)=Hanger      L(12)=Remark(legacy)  M(13)=Username(legacy)
 // N(14)=PkgDepth  O(15)=PkgWidth    P(16)=PkgHeight
+// Q(17)=DimUsername   R(18)=WeightUsername
 
 function doGet(e) {
   try {
@@ -19,17 +20,18 @@ function doGet(e) {
 
     // Save mode
     if (e.parameter.action === 'save') {
-      const identifier  = String(e.parameter.barcode     || '').trim();
-      const description = String(e.parameter.description || '').trim();
-      const depth       = parseFloat(e.parameter.depth)    || 0;
-      const width       = parseFloat(e.parameter.width)    || 0;
-      const height      = parseFloat(e.parameter.height)   || 0;
-      const weight      = parseFloat(e.parameter.weight)   || 0;
-      const hanger      = e.parameter.hanger === 'true';
-      const username    = String(e.parameter.username  || '').trim();
-      const pkgDepth    = parseFloat(e.parameter.pkgDepth)  || 0;
-      const pkgWidth    = parseFloat(e.parameter.pkgWidth)  || 0;
-      const pkgHeight   = parseFloat(e.parameter.pkgHeight) || 0;
+      const identifier    = String(e.parameter.barcode       || '').trim();
+      const description   = String(e.parameter.description   || '').trim();
+      const depth         = parseFloat(e.parameter.depth)    || 0;
+      const width         = parseFloat(e.parameter.width)    || 0;
+      const height        = parseFloat(e.parameter.height)   || 0;
+      const weight        = parseFloat(e.parameter.weight)   || 0;
+      const hanger        = e.parameter.hanger === 'true';
+      const pkgDepth      = parseFloat(e.parameter.pkgDepth)      || 0;
+      const pkgWidth      = parseFloat(e.parameter.pkgWidth)      || 0;
+      const pkgHeight     = parseFloat(e.parameter.pkgHeight)     || 0;
+      const dimUsername    = String(e.parameter.dimUsername    || '').trim();
+      const weightUsername = String(e.parameter.weightUsername || '').trim();
 
       const strip0 = (s) => s.replace(/^0+/, '') || s;
       const normId = strip0(identifier);
@@ -46,10 +48,13 @@ function doGet(e) {
           sheet.getRange(row, 9).setValue(weight);         // I: NetWeight
           sheet.getRange(row, 10).setValue(new Date());    // J: DateTime
           sheet.getRange(row, 11).setValue(hanger);        // K: Hanger
-          sheet.getRange(row, 13).setValue(username);      // M: Username
           sheet.getRange(row, 14).setValue(pkgDepth);      // N: PkgDepth
           sheet.getRange(row, 15).setValue(pkgWidth);      // O: PkgWidth
           sheet.getRange(row, 16).setValue(pkgHeight);     // P: PkgHeight
+          // Only overwrite username columns if non-empty (don't erase the other person's name)
+          if (dimUsername)    sheet.getRange(row, 13).setValue(dimUsername);   // M: legacy
+          if (dimUsername)    sheet.getRange(row, 17).setValue(dimUsername);   // Q: DimUsername
+          if (weightUsername) sheet.getRange(row, 18).setValue(weightUsername); // R: WeightUsername
           sheet.getRange(row, 6, 1, 3).setNumberFormat('0.00');       // F-H
           sheet.getRange(row, 9).setNumberFormat('0.000');             // I
           sheet.getRange(row, 10).setNumberFormat('dd/mm/yyyy hh:mm'); // J
@@ -62,7 +67,7 @@ function doGet(e) {
         }
       }
       if (!found) {
-        sheet.appendRow(['', '', '', identifier, description, depth, width, height, weight, new Date(), hanger, '', username, pkgDepth, pkgWidth, pkgHeight]);
+        sheet.appendRow(['', '', '', identifier, description, depth, width, height, weight, new Date(), hanger, '', dimUsername, pkgDepth, pkgWidth, pkgHeight, dimUsername, weightUsername]);
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 4).setNumberFormat('@');                 // D: barcode
         sheet.getRange(newRow, 6, 1, 3).setNumberFormat('0.00');       // F-H
@@ -95,8 +100,10 @@ function doGet(e) {
       const pkgDepth    = data[i][13] !== '' && data[i][13] !== undefined ? data[i][13] : ''; // N
       const pkgWidth    = data[i][14] !== '' && data[i][14] !== undefined ? data[i][14] : ''; // O
       const pkgHeight   = data[i][15] !== '' && data[i][15] !== undefined ? data[i][15] : ''; // P
+      const dimUsername    = data[i][16] !== undefined ? String(data[i][16]).trim() : ''; // Q
+      const weightUsername = data[i][17] !== undefined ? String(data[i][17]).trim() : ''; // R
       if (barcode) {
-        items.push({ division, department, cls, barcode, description, depth, width, height, weight, hanger, pkgDepth, pkgWidth, pkgHeight });
+        items.push({ division, department, cls, barcode, description, depth, width, height, weight, hanger, pkgDepth, pkgWidth, pkgHeight, dimUsername, weightUsername });
       }
     }
     return ContentService

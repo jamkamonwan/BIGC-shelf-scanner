@@ -1,13 +1,15 @@
 import { useState, useRef } from 'react'
 import { enqueue, flushQueue, recordSave, getLastSaveMinutes } from '../saveQueue'
 
-const USERNAME_KEY = 'shelf_scanner_username'
+const DIM_USERNAME_KEY    = 'shelf_scanner_dim_username'
+const WEIGHT_USERNAME_KEY = 'shelf_scanner_weight_username'
 
 export default function DimensionForm({
   barcode, description,
   initialWidth, initialHeight, initialDepth, initialWeight,
   initialHanger,
   initialPkgDepth, initialPkgWidth, initialPkgHeight,
+  initialDimUsername, initialWeightUsername,
   foundItem,
   onSaved, onRescan,
 }) {
@@ -19,25 +21,36 @@ export default function DimensionForm({
   const initPkgD = initialPkgDepth  !== '' ? String(initialPkgDepth)  : ''
   const initPkgW = initialPkgWidth  !== '' ? String(initialPkgWidth)  : ''
   const initPkgH = initialPkgHeight !== '' ? String(initialPkgHeight) : ''
+  const initDimU    = initialDimUsername    ? String(initialDimUsername)    : ''
+  const initWeightU = initialWeightUsername ? String(initialWeightUsername) : ''
 
-  const [width,     setWidth]     = useState(initW)
-  const [height,    setHeight]    = useState(initH)
-  const [depth,     setDepth]     = useState(initD)
-  const [weight,    setWeight]    = useState(initWt)
-  const [isHanger,  setIsHanger]  = useState(initHanger)
-  const [pkgDepth,  setPkgDepth]  = useState(initPkgD)
-  const [pkgWidth,  setPkgWidth]  = useState(initPkgW)
-  const [pkgHeight, setPkgHeight] = useState(initPkgH)
-  const [username,  setUsername]  = useState(() => {
-    try { return localStorage.getItem(USERNAME_KEY) || '' } catch { return '' }
+  const [width,         setWidth]         = useState(initW)
+  const [height,        setHeight]        = useState(initH)
+  const [depth,         setDepth]         = useState(initD)
+  const [weight,        setWeight]        = useState(initWt)
+  const [isHanger,      setIsHanger]      = useState(initHanger)
+  const [pkgDepth,      setPkgDepth]      = useState(initPkgD)
+  const [pkgWidth,      setPkgWidth]      = useState(initPkgW)
+  const [pkgHeight,     setPkgHeight]     = useState(initPkgH)
+  const [dimUsername,    setDimUsername]    = useState(() => {
+    try { return localStorage.getItem(DIM_USERNAME_KEY) || '' } catch { return '' }
+  })
+  const [weightUsername, setWeightUsername] = useState(() => {
+    try { return localStorage.getItem(WEIGHT_USERNAME_KEY) || '' } catch { return '' }
   })
   const [savedOk,   setSavedOk]   = useState(false)
   const [saveError, setSaveError] = useState(null)
 
-  function handleUsernameChange(e) {
+  function handleDimUsernameChange(e) {
     const val = e.target.value
-    setUsername(val)
-    try { localStorage.setItem(USERNAME_KEY, val) } catch {}
+    setDimUsername(val)
+    try { localStorage.setItem(DIM_USERNAME_KEY, val) } catch {}
+  }
+
+  function handleWeightUsernameChange(e) {
+    const val = e.target.value
+    setWeightUsername(val)
+    try { localStorage.setItem(WEIGHT_USERNAME_KEY, val) } catch {}
   }
 
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
@@ -46,25 +59,26 @@ export default function DimensionForm({
   const unchanged  = isExisting &&
     width === initW && height === initH && depth === initD &&
     weight === initWt && isHanger === initHanger &&
-    pkgDepth === initPkgD && pkgWidth === initPkgW && pkgHeight === initPkgH
+    pkgDepth === initPkgD && pkgWidth === initPkgW && pkgHeight === initPkgH &&
+    dimUsername === initDimU && weightUsername === initWeightU
 
-  const widthRef     = useRef()
-  const heightRef    = useRef()
-  const depthRef     = useRef()
-  const weightRef    = useRef()
-  const pkgWidthRef  = useRef()
-  const pkgHeightRef = useRef()
-  const pkgDepthRef  = useRef()
-  const saveRef      = useRef()
+  const dimUsernameRef    = useRef()
+  const widthRef          = useRef()
+  const heightRef         = useRef()
+  const depthRef          = useRef()
+  const weightUsernameRef = useRef()
+  const weightRef         = useRef()
+  const pkgWidthRef       = useRef()
+  const pkgHeightRef      = useRef()
+  const pkgDepthRef       = useRef()
+  const saveRef           = useRef()
 
   const advance = (nextRef) => (e) => {
     if (e.key === 'Enter') { e.preventDefault(); nextRef.current?.focus() }
   }
 
-  // Select all on focus so typing replaces the old value immediately
   const selectAll = (e) => e.target.select()
 
-  // Normalize .6 → 0.6 and 6. → 6 on blur
   const normDecimal = (val, setter) => {
     if (!val) return
     let v = val
@@ -74,8 +88,8 @@ export default function DimensionForm({
   }
 
   function handleSave() {
-    if (!username.trim()) {
-      setSaveError('กรุณากรอกชื่อผู้บันทึก')
+    if (!dimUsername.trim() && !weightUsername.trim()) {
+      setSaveError('กรุณากรอกชื่อผู้วัด หรือชื่อผู้ชั่ง')
       return
     }
     if (!width || !height || !depth) {
@@ -160,7 +174,8 @@ export default function DimensionForm({
       weight: wt,
       hanger: isHanger,
       pkgDepth: pkgD, pkgWidth: pkgW, pkgHeight: pkgH,
-      username: username.trim(),
+      dimUsername: dimUsername.trim(),
+      weightUsername: weightUsername.trim(),
     }
     enqueue(data)
     recordSave(barcode)
@@ -200,21 +215,6 @@ export default function DimensionForm({
         </div>
       )}
 
-      <div className="field" style={{ marginBottom: 6 }}>
-        <label htmlFor="username" style={{ fontSize: 13 }}>
-          ชื่อผู้บันทึก <span style={{ color: '#ef4444' }}>*</span>
-        </label>
-        <input
-          id="username"
-          className="input"
-          type="text"
-          placeholder="กรอกชื่อของคุณ"
-          value={username}
-          onChange={handleUsernameChange}
-          style={{ fontSize: 14 }}
-        />
-      </div>
-
       <div className="barcode-display">
         <span className="barcode-label">บาร์โค้ด</span>
         <span className="barcode-value">{barcode}</span>
@@ -242,6 +242,25 @@ export default function DimensionForm({
         }}>
           {description || <em>ไม่มีชื่อสินค้าในชีต</em>}
         </div>
+      </div>
+
+      {/* Dim username — before W/H/D */}
+      <div className="field" style={{ marginBottom: 4 }}>
+        <label htmlFor="dimUsername" style={{ fontSize: 13 }}>
+          ชื่อผู้วัด <span style={{ color: '#6b7280', fontWeight: 400 }}>W / H / D</span>
+        </label>
+        <input
+          ref={dimUsernameRef}
+          id="dimUsername"
+          className="input"
+          type="text"
+          placeholder="กรอกชื่อผู้วัดขนาด"
+          value={dimUsername}
+          onChange={handleDimUsernameChange}
+          onFocus={selectAll}
+          onKeyDown={advance(widthRef)}
+          style={{ fontSize: 14 }}
+        />
       </div>
 
       <div className="dims-grid">
@@ -278,9 +297,28 @@ export default function DimensionForm({
             onChange={(e) => setDepth(e.target.value)}
             onFocus={selectAll}
             onBlur={() => normDecimal(depth, setDepth)}
-            onKeyDown={advance(weightRef)}
+            onKeyDown={advance(weightUsernameRef)}
           />
         </div>
+      </div>
+
+      {/* Weight username — before Net Weight */}
+      <div className="field" style={{ marginTop: 8, marginBottom: 4 }}>
+        <label htmlFor="weightUsername" style={{ fontSize: 13 }}>
+          ชื่อผู้ชั่ง <span style={{ color: '#6b7280', fontWeight: 400 }}>Net Weight</span>
+        </label>
+        <input
+          ref={weightUsernameRef}
+          id="weightUsername"
+          className="input"
+          type="text"
+          placeholder="กรอกชื่อผู้ชั่งน้ำหนัก"
+          value={weightUsername}
+          onChange={handleWeightUsernameChange}
+          onFocus={selectAll}
+          onKeyDown={advance(weightRef)}
+          style={{ fontSize: 14 }}
+        />
       </div>
 
       <div className="field">
