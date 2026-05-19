@@ -320,7 +320,7 @@ export default function DimensionForm({
       </div>
       <div className="dims-grid">
         <div className="field">
-          <label htmlFor="pkgWidth">W</label>
+          <label htmlFor="pkgWidth">W (ซม.)</label>
           <input
             ref={pkgWidthRef} id="pkgWidth" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
@@ -332,7 +332,7 @@ export default function DimensionForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="pkgHeight">H</label>
+          <label htmlFor="pkgHeight">H (ซม.)</label>
           <input
             ref={pkgHeightRef} id="pkgHeight" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
@@ -344,7 +344,7 @@ export default function DimensionForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="pkgDepth">D</label>
+          <label htmlFor="pkgDepth">D (ซม.)</label>
           <input
             ref={pkgDepthRef} id="pkgDepth" className="input dim-input"
             type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
