@@ -105,26 +105,25 @@ export default function DimensionForm({
     const w = round2(rawW), h = round2(rawH), d = round2(rawD)
 
     const weightRaw = weight.trim()
-    if (!weightRaw) {
-      setSaveError('กรุณากรอกน้ำหนัก (Net Weight)')
-      return
-    }
-    if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
-      setSaveError('น้ำหนักต้องเป็นตัวเลขบวก เช่น 0.5')
-      return
-    }
-    const wt = round3(parseFloat(weightRaw))
-    if (wt === 0) {
-      setSaveError('น้ำหนักต้องมากกว่า 0')
-      return
-    }
-    if (wt < 0.001) {
-      setSaveError('น้ำหนักต้องมีค่าอย่างน้อย 0.001 กก. (1 กรัม)')
-      return
-    }
-    if (wt > 999) {
-      setSaveError('น้ำหนักต้องไม่เกิน 999 กก.')
-      return
+    let wt = 0
+    if (weightRaw !== '') {
+      if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
+        setSaveError('น้ำหนักต้องเป็นตัวเลขบวก เช่น 0.5 หรือเว้นว่างไว้')
+        return
+      }
+      wt = round3(parseFloat(weightRaw))
+      if (wt === 0) {
+        setSaveError('น้ำหนักต้องมากกว่า 0 หรือเว้นว่างไว้')
+        return
+      }
+      if (wt < 0.001) {
+        setSaveError('น้ำหนักต้องมีค่าอย่างน้อย 0.001 กก. (1 กรัม) หรือเว้นว่างไว้')
+        return
+      }
+      if (wt > 999) {
+        setSaveError('น้ำหนักต้องไม่เกิน 999 กก.')
+        return
+      }
     }
 
     const pkgAny = pkgDepth.trim() || pkgWidth.trim() || pkgHeight.trim()
@@ -286,8 +285,7 @@ export default function DimensionForm({
 
       <div className="field">
         <label htmlFor="weight">
-          Net Weight (กก.) <span style={{ color: '#ef4444' }}>*</span>
-          <span className="muted" style={{ marginLeft: 4, fontSize: 12 }}>ชั่งรวม product + packaging</span>
+          Net Weight (กก.) <span className="muted" style={{ fontSize: 12 }}>ไม่บังคับ — ชั่งรวม product + packaging</span>
         </label>
         <input
           ref={weightRef} id="weight" className="input"
