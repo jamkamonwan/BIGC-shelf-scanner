@@ -14,13 +14,16 @@ function doGet(e) {
     if (e.parameter.action === 'save') {
       const identifier  = String(e.parameter.barcode     || '').trim();
       const description = String(e.parameter.description || '').trim();
-      const depth       = parseFloat(e.parameter.depth)  || 0;
-      const width       = parseFloat(e.parameter.width)  || 0;
-      const height      = parseFloat(e.parameter.height) || 0;
-      const weight      = parseFloat(e.parameter.weight) || 0;
+      const depth       = parseFloat(e.parameter.depth)    || 0;
+      const width       = parseFloat(e.parameter.width)    || 0;
+      const height      = parseFloat(e.parameter.height)   || 0;
+      const weight      = parseFloat(e.parameter.weight)   || 0;
       const hanger      = e.parameter.hanger === 'true';
-      const remark      = String(e.parameter.remark    || '').trim();
       const username    = String(e.parameter.username  || '').trim();
+      const pkgDepth    = parseFloat(e.parameter.pkgDepth)  || 0;
+      const pkgWidth    = parseFloat(e.parameter.pkgWidth)  || 0;
+      const pkgHeight   = parseFloat(e.parameter.pkgHeight) || 0;
+
       // Strip leading zeros for comparison (handles Sheets stripping them from numeric barcodes)
       const strip0 = (s) => s.replace(/^0+/, '') || s;
       const normId = strip0(identifier);
@@ -39,20 +42,23 @@ function doGet(e) {
           sheet.getRange(row, 7).setValue(weight);
           sheet.getRange(row, 8).setValue(new Date());
           sheet.getRange(row, 9).setValue(hanger);
-          sheet.getRange(row, 10).setValue(remark);
           sheet.getRange(row, 11).setValue(username);
+          sheet.getRange(row, 12).setValue(pkgDepth);
+          sheet.getRange(row, 13).setValue(pkgWidth);
+          sheet.getRange(row, 14).setValue(pkgHeight);
           sheet.getRange(row, 4, 1, 3).setNumberFormat('0.00');
           sheet.getRange(row, 7).setNumberFormat('0.000');
           sheet.getRange(row, 8).setNumberFormat('dd/mm/yyyy hh:mm');
           sheet.getRange(row, 9).setDataValidation(
             SpreadsheetApp.newDataValidation().requireCheckbox().build()
           );
+          sheet.getRange(row, 12, 1, 3).setNumberFormat('0.00');
           found = true;
           break;
         }
       }
       if (!found) {
-        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date(), hanger, remark, username]);
+        sheet.appendRow([identifier, '', description, depth, width, height, weight, new Date(), hanger, '', username, pkgDepth, pkgWidth, pkgHeight]);
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 1, 1, 2).setNumberFormat('@');
         sheet.getRange(newRow, 4, 1, 3).setNumberFormat('0.00');
@@ -61,6 +67,7 @@ function doGet(e) {
         sheet.getRange(newRow, 9).setDataValidation(
           SpreadsheetApp.newDataValidation().requireCheckbox().build()
         );
+        sheet.getRange(newRow, 12, 1, 3).setNumberFormat('0.00');
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))
@@ -79,9 +86,11 @@ function doGet(e) {
       const height      = data[i][5] !== '' ? data[i][5] : '';
       const weight      = data[i][6] !== '' ? data[i][6] : '';
       const hanger      = data[i][8] === true;
-      const remark      = data[i][9] !== undefined ? String(data[i][9]).trim() : '';
+      const pkgDepth    = data[i][11] !== '' && data[i][11] !== undefined ? data[i][11] : '';
+      const pkgWidth    = data[i][12] !== '' && data[i][12] !== undefined ? data[i][12] : '';
+      const pkgHeight   = data[i][13] !== '' && data[i][13] !== undefined ? data[i][13] : '';
       if (barcode || articleCode) {
-        items.push({ barcode, articleCode, description, depth, width, height, weight, hanger, remark });
+        items.push({ barcode, articleCode, description, depth, width, height, weight, hanger, pkgDepth, pkgWidth, pkgHeight });
       }
     }
     return ContentService

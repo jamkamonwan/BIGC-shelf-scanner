@@ -20,8 +20,8 @@ function cacheAge() {
 export default function App() {
   const [step, setStep] = useState('scan')
   const [barcode, setBarcode] = useState('')
-  const [description, setDescription] = useState('')
   const [foundItem, setFoundItem] = useState(null)
+  const [notFoundBarcode, setNotFoundBarcode] = useState('')
   const [listError, setListError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [pendingCount, setPendingCount] = useState(getPendingCount)
@@ -78,33 +78,32 @@ export default function App() {
   function handleDetected(code) {
     const trimmed = code.trim()
     const found = Array.isArray(itemList)
-      ? itemList.find(
-          (item) =>
-            (item.barcode || '').trim() === trimmed ||
-            (item.articleCode || '').trim() === trimmed
-        )
+      ? itemList.find((item) => (item.barcode || '').trim() === trimmed)
       : null
+    if (!found) {
+      setNotFoundBarcode(trimmed)
+      setStep('notfound')
+      return
+    }
     setBarcode(trimmed)
-    setDescription(found?.description?.trim() || '')
-    setFoundItem(found || null)
+    setFoundItem(found)
     setStep('form')
   }
 
   function handleSaved(savedData) {
-    // Update local list immediately so rescanning the same item shows new values
     if (savedData) {
       setItemList(prev => {
         if (!Array.isArray(prev)) return prev
         const idx = prev.findIndex(item =>
-          (item.barcode || '').trim() === savedData.barcode ||
-          (item.articleCode || '').trim() === savedData.barcode
+          (item.barcode || '').trim() === savedData.barcode
         )
         if (idx === -1) {
           return [...prev, {
-            barcode: savedData.barcode, articleCode: '',
+            barcode: savedData.barcode,
             description: savedData.description,
             depth: savedData.depth, width: savedData.width,
             height: savedData.height, weight: savedData.weight,
+            pkgDepth: savedData.pkgDepth, pkgWidth: savedData.pkgWidth, pkgHeight: savedData.pkgHeight,
           }]
         }
         const next = [...prev]
@@ -113,7 +112,6 @@ export default function App() {
       })
     }
     setBarcode('')
-    setDescription('')
     setFoundItem(null)
     setStep('scan')
     fetchList()
@@ -172,6 +170,23 @@ export default function App() {
         </div>
       )}
 
+      {step === 'notfound' && (
+        <div className="form-screen center">
+          <p style={{ fontSize: 16, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>
+            ไม่พบบาร์โค้ดนี้ในระบบ
+          </p>
+          <p style={{ fontFamily: 'monospace', fontSize: 15, marginBottom: 20, color: '#374151' }}>
+            {notFoundBarcode}
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => { setNotFoundBarcode(''); setStep('scan') }}
+          >
+            สแกนใหม่
+          </button>
+        </div>
+      )}
+
       {step === 'scan' && (
         <BarcodeScanner onDetected={handleDetected} itemList={itemList} />
       )}
@@ -180,14 +195,15 @@ export default function App() {
         <DimensionForm
           key={barcode}
           barcode={barcode}
-          description={description}
-          setDescription={setDescription}
+          description={foundItem?.description?.trim() || ''}
           initialWidth={foundItem?.width ?? ''}
           initialHeight={foundItem?.height ?? ''}
           initialDepth={foundItem?.depth ?? ''}
           initialWeight={foundItem?.weight ?? ''}
           initialHanger={foundItem?.hanger ?? false}
-          initialRemark={foundItem?.remark ?? ''}
+          initialPkgDepth={foundItem?.pkgDepth ?? ''}
+          initialPkgWidth={foundItem?.pkgWidth ?? ''}
+          initialPkgHeight={foundItem?.pkgHeight ?? ''}
           foundItem={foundItem}
           onSaved={handleSaved}
           onRescan={() => setStep('scan')}

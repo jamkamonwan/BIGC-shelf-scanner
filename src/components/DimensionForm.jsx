@@ -4,25 +4,30 @@ import { enqueue, flushQueue, recordSave, getLastSaveMinutes } from '../saveQueu
 const USERNAME_KEY = 'shelf_scanner_username'
 
 export default function DimensionForm({
-  barcode, description, setDescription,
+  barcode, description,
   initialWidth, initialHeight, initialDepth, initialWeight,
-  initialHanger, initialRemark,
+  initialHanger,
+  initialPkgDepth, initialPkgWidth, initialPkgHeight,
   foundItem,
   onSaved, onRescan,
 }) {
-  const initW   = initialWidth  !== '' ? String(initialWidth)  : ''
-  const initH   = initialHeight !== '' ? String(initialHeight) : ''
-  const initD   = initialDepth  !== '' ? String(initialDepth)  : ''
-  const initWt  = initialWeight !== '' ? String(initialWeight) : ''
+  const initW    = initialWidth  !== '' ? String(initialWidth)  : ''
+  const initH    = initialHeight !== '' ? String(initialHeight) : ''
+  const initD    = initialDepth  !== '' ? String(initialDepth)  : ''
+  const initWt   = initialWeight !== '' ? String(initialWeight) : ''
   const initHanger = !!initialHanger
-  const initRemark = initialRemark || ''
+  const initPkgD = initialPkgDepth  !== '' ? String(initialPkgDepth)  : ''
+  const initPkgW = initialPkgWidth  !== '' ? String(initialPkgWidth)  : ''
+  const initPkgH = initialPkgHeight !== '' ? String(initialPkgHeight) : ''
 
-  const [width,    setWidth]    = useState(initW)
-  const [height,   setHeight]   = useState(initH)
-  const [depth,    setDepth]    = useState(initD)
-  const [weight,   setWeight]   = useState(initWt)
+  const [width,     setWidth]     = useState(initW)
+  const [height,    setHeight]    = useState(initH)
+  const [depth,     setDepth]     = useState(initD)
+  const [weight,    setWeight]    = useState(initWt)
   const [isHanger,  setIsHanger]  = useState(initHanger)
-  const [remark,    setRemark]    = useState(initRemark)
+  const [pkgDepth,  setPkgDepth]  = useState(initPkgD)
+  const [pkgWidth,  setPkgWidth]  = useState(initPkgW)
+  const [pkgHeight, setPkgHeight] = useState(initPkgH)
   const [username,  setUsername]  = useState(() => {
     try { return localStorage.getItem(USERNAME_KEY) || '' } catch { return '' }
   })
@@ -35,20 +40,22 @@ export default function DimensionForm({
     try { localStorage.setItem(USERNAME_KEY, val) } catch {}
   }
 
-  const initDescRef   = useRef(description)
   const [dupMinutes] = useState(() => getLastSaveMinutes(barcode))
 
   const isExisting = !!foundItem
   const unchanged  = isExisting &&
     width === initW && height === initH && depth === initD &&
-    weight === initWt && description === initDescRef.current &&
-    isHanger === initHanger && remark === initRemark
+    weight === initWt && isHanger === initHanger &&
+    pkgDepth === initPkgD && pkgWidth === initPkgW && pkgHeight === initPkgH
 
-  const widthRef  = useRef()
-  const heightRef = useRef()
-  const depthRef  = useRef()
-  const weightRef = useRef()
-  const saveRef   = useRef()
+  const widthRef     = useRef()
+  const heightRef    = useRef()
+  const depthRef     = useRef()
+  const weightRef    = useRef()
+  const pkgWidthRef  = useRef()
+  const pkgHeightRef = useRef()
+  const pkgDepthRef  = useRef()
+  const saveRef      = useRef()
 
   const advance = (nextRef) => (e) => {
     if (e.key === 'Enter') { e.preventDefault(); nextRef.current?.focus() }
@@ -98,44 +105,64 @@ export default function DimensionForm({
     const w = round2(rawW), h = round2(rawH), d = round2(rawD)
 
     const weightRaw = weight.trim()
-    let wt = 0
-    if (weightRaw !== '') {
-      if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
-        setSaveError('น้ำหนักต้องเป็นตัวเลขบวก เช่น 0.5 หรือเว้นว่างไว้')
-        return
-      }
-      wt = round3(parseFloat(weightRaw))
-      if (wt === 0) {
-        setSaveError('น้ำหนักต้องมากกว่า 0 หรือเว้นว่างไว้')
-        return
-      }
-      if (wt < 0.001) {
-        setSaveError('น้ำหนักต้องมีค่าอย่างน้อย 0.001 กก. (1 กรัม) หรือเว้นว่างไว้')
-        return
-      }
-      if (wt > 999) {
-        setSaveError('น้ำหนักต้องไม่เกิน 999 กก.')
-        return
-      }
-    }
-
-    const desc = description.trim()
-    if (desc.length > 100) {
-      setSaveError('ชื่อสินค้าต้องไม่เกิน 100 ตัวอักษร')
+    if (!weightRaw) {
+      setSaveError('กรุณากรอกน้ำหนัก (Net Weight)')
       return
     }
-    if (desc && !/^[A-Za-z0-9฀-๿\s.,\-_()/]+$/.test(desc)) {
-      setSaveError('ชื่อสินค้า: ใช้ได้เฉพาะตัวอักษร ตัวเลข ภาษาไทย และ . , - _ ( ) /')
+    if (!/^\d+(\.\d+)?$/.test(weightRaw)) {
+      setSaveError('น้ำหนักต้องเป็นตัวเลขบวก เช่น 0.5')
+      return
+    }
+    const wt = round3(parseFloat(weightRaw))
+    if (wt === 0) {
+      setSaveError('น้ำหนักต้องมากกว่า 0')
+      return
+    }
+    if (wt < 0.001) {
+      setSaveError('น้ำหนักต้องมีค่าอย่างน้อย 0.001 กก. (1 กรัม)')
+      return
+    }
+    if (wt > 999) {
+      setSaveError('น้ำหนักต้องไม่เกิน 999 กก.')
       return
     }
 
-    const remarkVal = remark.trim()
-    if (remarkVal.length > 300) {
-      setSaveError('หมายเหตุต้องไม่เกิน 300 ตัวอักษร')
-      return
+    const pkgAny = pkgDepth.trim() || pkgWidth.trim() || pkgHeight.trim()
+    let pkgD = 0, pkgW = 0, pkgH = 0
+    if (pkgAny) {
+      if (!pkgDepth.trim() || !pkgWidth.trim() || !pkgHeight.trim()) {
+        setSaveError('กรุณากรอก W, H, D ของบรรจุภัณฑ์ให้ครบทั้ง 3 ค่า')
+        return
+      }
+      if (hasSci(pkgWidth) || hasSci(pkgHeight) || hasSci(pkgDepth)) {
+        setSaveError('ไม่อนุญาตให้ใช้ scientific notation ในขนาดบรรจุภัณฑ์')
+        return
+      }
+      const rawPkgW = parseFloat(pkgWidth), rawPkgH = parseFloat(pkgHeight), rawPkgD = parseFloat(pkgDepth)
+      if (isNaN(rawPkgW) || isNaN(rawPkgH) || isNaN(rawPkgD)) {
+        setSaveError('ขนาดบรรจุภัณฑ์ต้องเป็นตัวเลขที่ถูกต้อง')
+        return
+      }
+      if (rawPkgW < 0.1 || rawPkgH < 0.1 || rawPkgD < 0.1) {
+        setSaveError('ขนาดบรรจุภัณฑ์ต้องมีค่าอย่างน้อย 0.1 ซม.')
+        return
+      }
+      if (rawPkgW > 500 || rawPkgH > 500 || rawPkgD > 500) {
+        setSaveError('ขนาดบรรจุภัณฑ์ต้องไม่เกิน 500 ซม.')
+        return
+      }
+      pkgW = round2(rawPkgW); pkgH = round2(rawPkgH); pkgD = round2(rawPkgD)
     }
 
-    const data = { barcode, description: desc, width: w, height: h, depth: d, weight: wt, hanger: isHanger, remark: remarkVal, username: username.trim() }
+    const data = {
+      barcode,
+      description: description.trim(),
+      width: w, height: h, depth: d,
+      weight: wt,
+      hanger: isHanger,
+      pkgDepth: pkgD, pkgWidth: pkgW, pkgHeight: pkgH,
+      username: username.trim(),
+    }
     enqueue(data)
     recordSave(barcode)
     flushQueue()
@@ -162,8 +189,6 @@ export default function DimensionForm({
       </div>
     )
   }
-
-  const fromSheet = !!description
 
   return (
     <div className="form-screen">
@@ -208,21 +233,16 @@ export default function DimensionForm({
       </div>
 
       <div className="field">
-        <label htmlFor="desc">
-          ชื่อสินค้า{' '}
-          {fromSheet
-            ? <span className="muted">(จากชีต)</span>
-            : <span className="muted">(ไม่บังคับ)</span>}
-        </label>
-        <input
-          id="desc"
-          className="input"
-          type="text"
-          placeholder="เช่น ขนม 200g"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={fromSheet ? { background: '#f0fdf4', borderColor: '#22c55e', color: '#14532d' } : {}}
-        />
+        <label>ชื่อสินค้า <span className="muted">(จากชีต)</span></label>
+        <div style={{
+          padding: '8px 12px', borderRadius: 8, fontSize: 14,
+          background: description ? '#f0fdf4' : '#f9fafb',
+          border: `1.5px solid ${description ? '#22c55e' : '#e5e7eb'}`,
+          color: description ? '#14532d' : '#9ca3af',
+          minHeight: 40, lineHeight: '22px',
+        }}>
+          {description || <em>ไม่มีชื่อสินค้าในชีต</em>}
+        </div>
       </div>
 
       <div className="dims-grid">
@@ -265,15 +285,18 @@ export default function DimensionForm({
       </div>
 
       <div className="field">
-        <label htmlFor="weight">น้ำหนัก (กก.) <span className="muted">ไม่บังคับ เช่น 0.01</span></label>
+        <label htmlFor="weight">
+          Net Weight (กก.) <span style={{ color: '#ef4444' }}>*</span>
+          <span className="muted" style={{ marginLeft: 4, fontSize: 12 }}>ชั่งรวม product + packaging</span>
+        </label>
         <input
           ref={weightRef} id="weight" className="input"
-          type="text" inputMode="decimal" placeholder="0.01"
+          type="text" inputMode="decimal" placeholder="0.001"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
           onFocus={selectAll}
           onBlur={() => normDecimal(weight, setWeight)}
-          onKeyDown={advance(saveRef)}
+          onKeyDown={advance(pkgWidthRef)}
         />
       </div>
 
@@ -289,16 +312,49 @@ export default function DimensionForm({
         </label>
       </div>
 
-      <div className="field">
-        <label htmlFor="remark">หมายเหตุ <span className="muted">ไม่บังคับ</span></label>
-        <input
-          id="remark"
-          className="input"
-          type="text"
-          placeholder="เช่น สินค้า import, ราคาพิเศษ"
-          value={remark}
-          onChange={(e) => setRemark(e.target.value)}
-        />
+      <div style={{ marginTop: 14, marginBottom: 4, borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+          ขนาดบรรจุภัณฑ์ (ซม.)
+        </span>
+        <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>ไม่บังคับ — กรอกครบทั้ง 3 หรือเว้นว่างทั้งหมด</span>
+      </div>
+      <div className="dims-grid">
+        <div className="field">
+          <label htmlFor="pkgWidth">W</label>
+          <input
+            ref={pkgWidthRef} id="pkgWidth" className="input dim-input"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
+            value={pkgWidth}
+            onChange={(e) => setPkgWidth(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(pkgWidth, setPkgWidth)}
+            onKeyDown={advance(pkgHeightRef)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="pkgHeight">H</label>
+          <input
+            ref={pkgHeightRef} id="pkgHeight" className="input dim-input"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
+            value={pkgHeight}
+            onChange={(e) => setPkgHeight(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(pkgHeight, setPkgHeight)}
+            onKeyDown={advance(pkgDepthRef)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="pkgDepth">D</label>
+          <input
+            ref={pkgDepthRef} id="pkgDepth" className="input dim-input"
+            type="number" inputMode="decimal" min="0" step="0.01" placeholder="0.00"
+            value={pkgDepth}
+            onChange={(e) => setPkgDepth(e.target.value)}
+            onFocus={selectAll}
+            onBlur={() => normDecimal(pkgDepth, setPkgDepth)}
+            onKeyDown={advance(saveRef)}
+          />
+        </div>
       </div>
 
       {saveError && <p className="error-msg">{saveError}</p>}
