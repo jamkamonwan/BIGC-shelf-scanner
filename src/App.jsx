@@ -24,15 +24,16 @@ function itemHasDims(item) {
 }
 
 export default function App() {
-  const [step, setStep]       = useState('scan')
+  const [step, setStep]           = useState('scan')
   const [activeTab, setActiveTab] = useState('scan') // 'scan' | 'list'
-  const [barcode, setBarcode] = useState('')
-  const [foundItem, setFoundItem]         = useState(null)
+  const [selectedDiv, setSelectedDiv] = useState(null) // null = all divisions
+  const [barcode, setBarcode]     = useState('')
+  const [foundItem, setFoundItem]             = useState(null)
   const [notFoundBarcode, setNotFoundBarcode] = useState('')
-  const [listError, setListError]         = useState(null)
-  const [refreshing, setRefreshing]       = useState(false)
-  const [pendingCount, setPendingCount]   = useState(getPendingCount)
-  const [itemList, setItemList]           = useState(loadCache)
+  const [listError, setListError]             = useState(null)
+  const [refreshing, setRefreshing]           = useState(false)
+  const [pendingCount, setPendingCount]       = useState(getPendingCount)
+  const [itemList, setItemList]               = useState(loadCache)
 
   const fetchingRef = useRef(false)
 
@@ -158,11 +159,21 @@ export default function App() {
     )
   }
 
-  const remaining = Array.isArray(itemList) ? itemList.filter(item => !itemHasDims(item)) : []
-  const total     = Array.isArray(itemList) ? itemList.length : 0
-  const doneCount = total - remaining.length
+  const remaining  = Array.isArray(itemList) ? itemList.filter(item => !itemHasDims(item)) : []
+  const total      = Array.isArray(itemList) ? itemList.length : 0
+  const doneCount  = total - remaining.length
 
-  // Tab bar (shown when not in form)
+  // Unique divisions from remaining items (preserve sheet order)
+  const divisions = []
+  remaining.forEach(item => {
+    const d = (item.division || '').trim()
+    if (d && !divisions.includes(d)) divisions.push(d)
+  })
+
+  const visibleItems = selectedDiv
+    ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
+    : remaining
+
   const tabBar = step !== 'form' && (
     <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#fff' }}>
       <button
@@ -223,7 +234,7 @@ export default function App() {
 
       {tabBar}
 
-      {/* Not found screen */}
+      {/* Not found */}
       {step === 'notfound' && (
         <div className="form-screen center">
           <p style={{ fontSize: 16, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>
@@ -232,27 +243,27 @@ export default function App() {
           <p style={{ fontFamily: 'monospace', fontSize: 15, marginBottom: 20, color: '#374151' }}>
             {notFoundBarcode}
           </p>
-          <button
-            className="btn-primary"
-            onClick={() => { setNotFoundBarcode(''); setStep('scan') }}
-          >
+          <button className="btn-primary" onClick={() => { setNotFoundBarcode(''); setStep('scan') }}>
             สแกนใหม่
           </button>
         </div>
       )}
 
-      {/* Scanner tab */}
+      {/* Scanner */}
       {step === 'scan' && activeTab === 'scan' && (
         <BarcodeScanner onDetected={handleDetected} itemList={itemList} />
       )}
 
-      {/* Item list tab — remaining items only */}
+      {/* Item list tab */}
       {step === 'scan' && activeTab === 'list' && (
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+
+          {/* Summary bar */}
           <div style={{
-            padding: '10px 16px', background: '#f9fafb',
+            padding: '8px 16px', background: '#f9fafb',
             borderBottom: '1px solid #e5e7eb',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0,
           }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>
               ยังไม่มีข้อมูล <strong style={{ color: '#dc2626' }}>{remaining.length}</strong> รายการ
@@ -262,26 +273,74 @@ export default function App() {
             </span>
           </div>
 
-          {remaining.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 16px', color: '#16a34a' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-              <p style={{ fontWeight: 600, fontSize: 16 }}>ครบทุกรายการแล้ว!</p>
-              <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน</p>
+          {/* Division filter buttons */}
+          {divisions.length > 0 && (
+            <div style={{
+              display: 'flex', gap: 8, overflowX: 'auto',
+              padding: '8px 12px', background: '#fff',
+              borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+              WebkitOverflowScrolling: 'touch',
+            }}>
+              <button
+                onClick={() => setSelectedDiv(null)}
+                style={{
+                  flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
+                  border: '1.5px solid',
+                  borderColor: selectedDiv === null ? '#3b82f6' : '#d1d5db',
+                  background: selectedDiv === null ? '#3b82f6' : '#fff',
+                  color: selectedDiv === null ? '#fff' : '#374151',
+                  cursor: 'pointer', fontWeight: 500,
+                }}
+              >
+                ทั้งหมด ({remaining.length})
+              </button>
+              {divisions.map(div => {
+                const count = remaining.filter(i => (i.division || '').trim() === div).length
+                const active = selectedDiv === div
+                return (
+                  <button
+                    key={div}
+                    onClick={() => setSelectedDiv(div)}
+                    style={{
+                      flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
+                      border: '1.5px solid',
+                      borderColor: active ? '#3b82f6' : '#d1d5db',
+                      background: active ? '#3b82f6' : '#fff',
+                      color: active ? '#fff' : '#374151',
+                      cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    {div} ({count})
+                  </button>
+                )
+              })}
             </div>
-          ) : (
-            <div>
-              {remaining.map((item, idx) => (
+          )}
+
+          {/* Item rows */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {visibleItems.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 16px', color: '#16a34a' }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+                <p style={{ fontWeight: 600, fontSize: 16 }}>
+                  {selectedDiv ? `${selectedDiv} — ครบแล้ว!` : 'ครบทุกรายการแล้ว!'}
+                </p>
+                <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                  สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน
+                </p>
+              </div>
+            ) : (
+              visibleItems.map((item, idx) => (
                 <div
                   key={item.barcode || idx}
                   onClick={() => handleSelectItem(item)}
+                  onTouchStart={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                  onTouchEnd={(e) => e.currentTarget.style.background = '#fff'}
                   style={{
                     padding: '12px 16px', borderBottom: '1px solid #f3f4f6',
                     cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', background: '#fff',
-                    activeOpacity: 0.7,
                   }}
-                  onTouchStart={(e) => e.currentTarget.style.background = '#f0f9ff'}
-                  onTouchEnd={(e) => e.currentTarget.style.background = '#fff'}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
@@ -290,19 +349,27 @@ export default function App() {
                     }}>
                       {item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ไม่มีชื่อสินค้า</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, fontFamily: 'monospace' }}>
-                      {item.barcode}
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace' }}>{item.barcode}</span>
+                      {!selectedDiv && item.division && (
+                        <span style={{
+                          background: '#eff6ff', color: '#1d4ed8',
+                          borderRadius: 4, padding: '0 5px', fontSize: 11,
+                        }}>
+                          {item.division}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span style={{ color: '#9ca3af', fontSize: 18, marginLeft: 8 }}>›</span>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
 
-      {/* Dimension form */}
+      {/* Form */}
       {step === 'form' && (
         <DimensionForm
           key={barcode}
