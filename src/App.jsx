@@ -349,14 +349,21 @@ export default function App() {
                     }}>
                       {item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ไม่มีชื่อสินค้า</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', gap: 8 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontFamily: 'monospace' }}>{item.barcode}</span>
                       {!selectedDiv && item.division && (
-                        <span style={{
-                          background: '#eff6ff', color: '#1d4ed8',
-                          borderRadius: 4, padding: '0 5px', fontSize: 11,
-                        }}>
+                        <span style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: 4, padding: '0 5px', fontSize: 11 }}>
                           {item.division}
+                        </span>
+                      )}
+                      {item.department && (
+                        <span style={{ background: '#f0fdf4', color: '#15803d', borderRadius: 4, padding: '0 5px', fontSize: 11 }}>
+                          {item.department}
+                        </span>
+                      )}
+                      {item.cls && (
+                        <span style={{ background: '#fdf4ff', color: '#7e22ce', borderRadius: 4, padding: '0 5px', fontSize: 11 }}>
+                          {item.cls}
                         </span>
                       )}
                     </div>
