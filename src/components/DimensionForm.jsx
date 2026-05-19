@@ -349,7 +349,7 @@ export default function DimensionForm({
       </div>
 
       <div style={{ marginTop: 14, marginBottom: 4, borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>
           ขนาดบรรจุภัณฑ์ (ซม.)
         </span>
         <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>ไม่บังคับ — กรอกครบทั้ง 3 หรือเว้นว่างทั้งหมด</span>
