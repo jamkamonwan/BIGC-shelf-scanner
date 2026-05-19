@@ -27,7 +27,7 @@ export default function App() {
   const [step, setStep]           = useState('scan')
   const [activeTab, setActiveTab] = useState('scan') // 'scan' | 'list'
   const [selectedDiv, setSelectedDiv] = useState(null) // null = all divisions
-  const [divSearch, setDivSearch] = useState('')
+  const [barcodeSearch, setBarcodeSearch] = useState('')
   const [barcode, setBarcode]     = useState('')
   const [foundItem, setFoundItem]             = useState(null)
   const [notFoundBarcode, setNotFoundBarcode] = useState('')
@@ -171,18 +171,13 @@ export default function App() {
     if (d && !divisions.includes(d)) divisions.push(d)
   })
 
-  const searchTerm = divSearch.trim().toLowerCase()
-  const filteredDivisions = searchTerm
-    ? divisions.filter(d => d.toLowerCase().includes(searchTerm))
-    : divisions
-  const activeDiv = searchTerm
-    ? (filteredDivisions.length === 1 ? filteredDivisions[0] : null)
-    : selectedDiv
-  const visibleItems = activeDiv
-    ? remaining.filter(item => (item.division || '').trim() === activeDiv)
-    : searchTerm
-      ? remaining.filter(item => (item.division || '').trim().toLowerCase().includes(searchTerm))
-      : remaining
+  const divFiltered = selectedDiv
+    ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
+    : remaining
+  const barcodeQuery = barcodeSearch.trim()
+  const visibleItems = barcodeQuery
+    ? divFiltered.filter(item => (item.barcode || '').includes(barcodeQuery))
+    : divFiltered
 
   const tabBar = step !== 'form' && (
     <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#fff' }}>
@@ -283,64 +278,65 @@ export default function App() {
             </span>
           </div>
 
-          {/* Division search + filter */}
+          {/* Division filter buttons */}
           {divisions.length > 0 && (
-            <>
-              <div style={{ padding: '8px 12px', background: '#fff', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
-                <input
-                  type="text"
-                  placeholder="ค้นหา Division…"
-                  value={divSearch}
-                  onChange={e => { setDivSearch(e.target.value); setSelectedDiv(null) }}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    padding: '7px 12px', borderRadius: 8, fontSize: 14,
-                    border: '1.5px solid #d1d5db', outline: 'none',
-                  }}
-                />
-              </div>
-              <div style={{
-                display: 'flex', gap: 8, overflowX: 'auto',
-                padding: '8px 12px', background: '#fff',
-                borderBottom: '1px solid #e5e7eb', flexShrink: 0,
-                WebkitOverflowScrolling: 'touch',
-              }}>
-                <button
-                  onClick={() => { setSelectedDiv(null); setDivSearch('') }}
-                  style={{
-                    flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
-                    border: '1.5px solid',
-                    borderColor: !selectedDiv && !divSearch ? '#3b82f6' : '#d1d5db',
-                    background: !selectedDiv && !divSearch ? '#3b82f6' : '#fff',
-                    color: !selectedDiv && !divSearch ? '#fff' : '#374151',
-                    cursor: 'pointer', fontWeight: 500,
-                  }}
-                >
-                  ทั้งหมด ({remaining.length})
-                </button>
-                {filteredDivisions.map(div => {
-                  const count = remaining.filter(i => (i.division || '').trim() === div).length
-                  const active = selectedDiv === div || (searchTerm && filteredDivisions.length === 1)
-                  return (
-                    <button
-                      key={div}
-                      onClick={() => { setSelectedDiv(div); setDivSearch('') }}
-                      style={{
-                        flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
-                        border: '1.5px solid',
-                        borderColor: active ? '#3b82f6' : '#d1d5db',
-                        background: active ? '#3b82f6' : '#fff',
-                        color: active ? '#fff' : '#374151',
-                        cursor: 'pointer', fontWeight: 500,
-                      }}
-                    >
-                      {div} ({count})
-                    </button>
-                  )
-                })}
-              </div>
-            </>
+            <div style={{
+              display: 'flex', gap: 8, overflowX: 'auto',
+              padding: '8px 12px', background: '#fff',
+              borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+              WebkitOverflowScrolling: 'touch',
+            }}>
+              <button
+                onClick={() => { setSelectedDiv(null); setBarcodeSearch('') }}
+                style={{
+                  flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
+                  border: '1.5px solid',
+                  borderColor: selectedDiv === null ? '#3b82f6' : '#d1d5db',
+                  background: selectedDiv === null ? '#3b82f6' : '#fff',
+                  color: selectedDiv === null ? '#fff' : '#374151',
+                  cursor: 'pointer', fontWeight: 500,
+                }}
+              >
+                ทั้งหมด ({remaining.length})
+              </button>
+              {divisions.map(div => {
+                const count = remaining.filter(i => (i.division || '').trim() === div).length
+                const active = selectedDiv === div
+                return (
+                  <button
+                    key={div}
+                    onClick={() => { setSelectedDiv(div); setBarcodeSearch('') }}
+                    style={{
+                      flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
+                      border: '1.5px solid',
+                      borderColor: active ? '#3b82f6' : '#d1d5db',
+                      background: active ? '#3b82f6' : '#fff',
+                      color: active ? '#fff' : '#374151',
+                      cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    {div} ({count})
+                  </button>
+                )
+              })}
+            </div>
           )}
+
+          {/* Barcode search within selected division */}
+          <div style={{ padding: '8px 12px', background: '#fff', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder={selectedDiv ? `ค้นหาบาร์โค้ดใน ${selectedDiv}…` : 'ค้นหาบาร์โค้ด…'}
+              value={barcodeSearch}
+              onChange={e => setBarcodeSearch(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '7px 12px', borderRadius: 8, fontSize: 14,
+                border: '1.5px solid #d1d5db', outline: 'none',
+              }}
+            />
+          </div>
 
           {/* Item rows */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
