@@ -340,17 +340,39 @@ export default function App() {
           {/* List content — only when data is loaded */}
           {itemList && <>
 
-          {/* Summary bar */}
+          {/* Summary bar — tappable quick-filters */}
           <div style={{
-            padding: '8px 16px', background: '#f9fafb',
+            padding: '8px 12px', background: '#f9fafb',
             borderBottom: '1px solid #e5e7eb', flexShrink: 0,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+            display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
           }}>
-            <div style={{ display: 'flex', gap: 10, fontSize: 12, flexWrap: 'wrap' }}>
-              <span style={{ color: '#dc2626', fontWeight: 600 }}>รอ Dim: {needDimCount}</span>
-              <span style={{ color: '#ea580c', fontWeight: 600 }}>รอชั่ง: {needWeightCount}</span>
-            </div>
-            <span style={{ fontSize: 12, color: '#6b7280' }}>
+            {[
+              { key: 'need_dim',    label: '📐 รอ Dim',  count: needDimCount,    active: '#dc2626' },
+              { key: 'need_weight', label: '⚖️ รอชั่ง', count: needWeightCount, active: '#ea580c' },
+            ].map(({ key, label, count, active }) => {
+              const on = selectedStatus === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setSelectedStatus(on ? null : key)
+                    setSelectedDiv(null)
+                    setBarcodeSearch('')
+                    setShowCount(100)
+                  }}
+                  style={{
+                    flexShrink: 0, padding: '5px 12px', borderRadius: 20, fontSize: 12,
+                    border: `1.5px solid ${on ? active : '#d1d5db'}`,
+                    background: on ? active : '#fff',
+                    color: on ? '#fff' : active,
+                    cursor: 'pointer', fontWeight: 700,
+                  }}
+                >
+                  {label}: {count}
+                </button>
+              )
+            })}
+            <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 'auto' }}>
               ✅ <strong style={{ color: '#16a34a' }}>{doneCount}</strong> / {total}
             </span>
           </div>
@@ -399,30 +421,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Status filter pills */}
-          <div style={{
-            display: 'flex', gap: 6, padding: '6px 12px', background: '#fff',
-            borderBottom: '1px solid #e5e7eb', flexShrink: 0,
-          }}>
-            {[
-              { key: null,           label: `ทั้งหมด (${divFiltered.length})`,                                          bg: '#3b82f6' },
-              { key: 'need_dim',     label: `รอ Dim (${divFiltered.filter(i => getStatus(i) === 'need_dim').length})`,     bg: '#dc2626' },
-              { key: 'need_weight',  label: `รอชั่ง (${divFiltered.filter(i => getStatus(i) === 'need_weight').length})`,  bg: '#ea580c' },
-            ].map(({ key, label, bg }) => {
-              const active = selectedStatus === key
-              return (
-                <button key={String(key)} onClick={() => { setSelectedStatus(key); setShowCount(100) }} style={{
-                  flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12,
-                  border: `1.5px solid ${active ? bg : '#d1d5db'}`,
-                  background: active ? bg : '#fff',
-                  color: active ? '#fff' : '#374151',
-                  cursor: 'pointer', fontWeight: 500,
-                }}>
-                  {label}
-                </button>
-              )
-            })}
-          </div>
 
           {/* Barcode search within selected division */}
           <div style={{ padding: '8px 12px', background: '#fff', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
