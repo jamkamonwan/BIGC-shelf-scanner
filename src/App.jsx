@@ -145,8 +145,8 @@ export default function App() {
     }
     setBarcode('')
     setFoundItem(null)
+    setBarcodeSearch('')
     setStep('scan')
-    fetchList()
     setTimeout(() => setPendingCount(getPendingCount()), 2000)
   }
 
