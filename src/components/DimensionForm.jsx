@@ -140,7 +140,7 @@ export default function DimensionForm({
       }
     }
 
-    const pkgAny = pkgDepth.trim() || pkgWidth.trim() || pkgHeight.trim()
+    const pkgAny = [pkgDepth, pkgWidth, pkgHeight].some(v => parseFloat(v) > 0)
     let pkgD = 0, pkgW = 0, pkgH = 0
     if (pkgAny) {
       if (!pkgDepth.trim() || !pkgWidth.trim() || !pkgHeight.trim()) {
