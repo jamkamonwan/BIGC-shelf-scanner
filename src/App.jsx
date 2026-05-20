@@ -38,7 +38,8 @@ export default function App() {
   const [pendingCount, setPendingCount]       = useState(getPendingCount)
   const [itemList, setItemList]               = useState(loadCache)
 
-  const fetchingRef = useRef(false)
+  const fetchingRef  = useRef(false)
+  const itemListRef  = useRef(itemList)
 
   const fetchList = useCallback(() => {
     if (!SCRIPT_URL || fetchingRef.current) return
@@ -50,6 +51,7 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
+          itemListRef.current = data
           setItemList(data)
           setListLoading(false)
           try {
@@ -88,13 +90,11 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline)
   }, [fetchList])
 
-  function handleDetected(code) {
+  const handleDetected = useCallback((code) => {
     const trimmed = code.trim()
-    if (!Array.isArray(itemList)) {
-      // Still loading — can't look up yet; stay on scan screen
-      return
-    }
-    const found = itemList.find((item) => (item.barcode || '').trim() === trimmed)
+    const list = itemListRef.current
+    if (!Array.isArray(list)) return
+    const found = list.find((item) => (item.barcode || '').trim() === trimmed)
     if (!found) {
       setNotFoundBarcode(trimmed)
       setStep('notfound')
@@ -103,7 +103,7 @@ export default function App() {
     setBarcode(trimmed)
     setFoundItem(found)
     setStep('form')
-  }
+  }, [])
 
   function handleSelectItem(item) {
     setBarcode((item.barcode || '').trim())

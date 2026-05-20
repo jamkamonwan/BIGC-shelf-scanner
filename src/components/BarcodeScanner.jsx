@@ -7,6 +7,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
   const controlsRef = useRef(null)
   const animRef     = useRef(null)
   const stoppedRef  = useRef(false)
+  const itemListRef = useRef(itemList)
   const [error, setError]           = useState(null)
   const [ready, setReady]           = useState(false)
   const [engine, setEngine]         = useState(null) // 'native' | 'zxing'
@@ -88,9 +89,12 @@ export default function BarcodeScanner({ onDetected, itemList }) {
     } catch (_) {}
   }
 
+  useEffect(() => { itemListRef.current = itemList }, [itemList])
+
   function isInList(code) {
-    if (!Array.isArray(itemList)) return false
-    return itemList.some(
+    const list = itemListRef.current
+    if (!Array.isArray(list)) return false
+    return list.some(
       (item) => (item.barcode || '') === code || (item.articleCode || '') === code
     )
   }
@@ -190,7 +194,7 @@ export default function BarcodeScanner({ onDetected, itemList }) {
       setZoom(1)
       setZoomSupported(false)
     }
-  }, [onDetected, itemList])
+  }, [onDetected])
 
   function validateBarcode(val) {
     if (!/^\d+$/.test(val))       return 'บาร์โค้ดต้องเป็นตัวเลขเท่านั้น'
