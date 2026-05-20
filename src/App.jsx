@@ -52,6 +52,8 @@ export default function App() {
   const fetchingRef  = useRef(false)
   const itemListRef  = useRef(itemList)
 
+  useEffect(() => { itemListRef.current = itemList }, [itemList])
+
   const fetchList = useCallback(() => {
     if (!SCRIPT_URL || fetchingRef.current) return
     fetchingRef.current = true
