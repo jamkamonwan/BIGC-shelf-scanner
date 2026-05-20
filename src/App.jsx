@@ -6,7 +6,7 @@ import { flushQueue, getPendingCount } from './saveQueue'
 
 const CACHE_KEY    = 'shelf_scanner_items_v4'
 const CACHE_TS_KEY = 'shelf_scanner_items_ts'
-const STALE_MS     = 30 * 1000
+const STALE_MS     = 3 * 60 * 1000  // 3 minutes
 
 function loadCache() {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') } catch { return null }
@@ -87,7 +87,7 @@ export default function App() {
 
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchList()
+      if (document.visibilityState === 'visible' && cacheAge() > STALE_MS) fetchList()
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
