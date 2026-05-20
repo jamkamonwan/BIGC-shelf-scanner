@@ -126,24 +126,31 @@ export default function App() {
 
   function handleSaved(savedData) {
     if (savedData) {
-      setItemList(prev => {
-        if (!Array.isArray(prev)) return prev
+      const prev = itemListRef.current
+      if (Array.isArray(prev)) {
         const idx = prev.findIndex(item =>
           (item.barcode || '').trim() === savedData.barcode
         )
+        let next
         if (idx === -1) {
-          return [...prev, {
+          next = [...prev, {
             barcode: savedData.barcode,
             description: savedData.description,
             depth: savedData.depth, width: savedData.width,
             height: savedData.height, weight: savedData.weight,
             pkgDepth: savedData.pkgDepth, pkgWidth: savedData.pkgWidth, pkgHeight: savedData.pkgHeight,
           }]
+        } else {
+          next = [...prev]
+          next[idx] = { ...next[idx], ...savedData }
         }
-        const next = [...prev]
-        next[idx] = { ...next[idx], ...savedData }
-        return next
-      })
+        itemListRef.current = next
+        setItemList(next)
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(next))
+          localStorage.setItem(CACHE_TS_KEY, String(Date.now()))
+        } catch {}
+      }
     }
     setBarcode('')
     setFoundItem(null)
@@ -515,10 +522,10 @@ export default function App() {
           key={barcode}
           barcode={barcode}
           description={foundItem?.description?.trim() || ''}
-          initialWidth={foundItem?.width ?? ''}
-          initialHeight={foundItem?.height ?? ''}
-          initialDepth={foundItem?.depth ?? ''}
-          initialWeight={foundItem?.weight ?? ''}
+          initialWidth={foundItem?.width || ''}
+          initialHeight={foundItem?.height || ''}
+          initialDepth={foundItem?.depth || ''}
+          initialWeight={foundItem?.weight || ''}
           initialHanger={foundItem?.hanger ?? false}
           initialPkgDepth={foundItem?.pkgDepth || ''}
           initialPkgWidth={foundItem?.pkgWidth || ''}
