@@ -7,7 +7,7 @@
 // F(6)=ProdDepth  G(7)=ProdWidth    H(8)=ProdHeight   I(9)=NetWeight
 // J(10)=DateTime  K(11)=Hanger      L(12)=Remark(legacy)  M(13)=Username(legacy)
 // N(14)=PkgDepth  O(15)=PkgWidth    P(16)=PkgHeight
-// Q(17)=DimUsername   R(18)=WeightUsername
+// Q(17)=DimUsername   R(18)=WeightUsername   S(19)=WeightDate
 
 function doGet(e) {
   try {
@@ -46,18 +46,24 @@ function doGet(e) {
           sheet.getRange(row, 7).setValue(width);          // G: ProdWidth
           sheet.getRange(row, 8).setValue(height);         // H: ProdHeight
           sheet.getRange(row, 9).setValue(weight);         // I: NetWeight
-          sheet.getRange(row, 10).setValue(new Date());    // J: DateTime
           sheet.getRange(row, 11).setValue(hanger);        // K: Hanger
           sheet.getRange(row, 14).setValue(pkgDepth);      // N: PkgDepth
           sheet.getRange(row, 15).setValue(pkgWidth);      // O: PkgWidth
           sheet.getRange(row, 16).setValue(pkgHeight);     // P: PkgHeight
-          // Only overwrite username columns if non-empty (don't erase the other person's name)
-          if (dimUsername)    sheet.getRange(row, 13).setValue(dimUsername);   // M: legacy
-          if (dimUsername)    sheet.getRange(row, 17).setValue(dimUsername);   // Q: DimUsername
-          if (weightUsername) sheet.getRange(row, 18).setValue(weightUsername); // R: WeightUsername
+          // Only overwrite username/date columns if non-empty (don't erase the other person's data)
+          if (dimUsername) {
+            sheet.getRange(row, 10).setValue(new Date());              // J: DimDate — only when dim person saves
+            sheet.getRange(row, 10).setNumberFormat('dd/mm/yyyy hh:mm');
+            sheet.getRange(row, 13).setValue(dimUsername);             // M: legacy
+            sheet.getRange(row, 17).setValue(dimUsername);             // Q: DimUsername
+          }
+          if (weightUsername) {
+            sheet.getRange(row, 18).setValue(weightUsername);          // R: WeightUsername
+            sheet.getRange(row, 19).setValue(new Date());              // S: WeightDate
+            sheet.getRange(row, 19).setNumberFormat('dd/mm/yyyy hh:mm');
+          }
           sheet.getRange(row, 6, 1, 3).setNumberFormat('0.00');       // F-H
           sheet.getRange(row, 9).setNumberFormat('0.000');             // I
-          sheet.getRange(row, 10).setNumberFormat('dd/mm/yyyy hh:mm'); // J
           sheet.getRange(row, 11).setDataValidation(
             SpreadsheetApp.newDataValidation().requireCheckbox().build()
           );
@@ -67,16 +73,19 @@ function doGet(e) {
         }
       }
       if (!found) {
-        sheet.appendRow(['', '', '', identifier, description, depth, width, height, weight, new Date(), hanger, '', dimUsername, pkgDepth, pkgWidth, pkgHeight, dimUsername, weightUsername]);
+        const now = new Date();
+        const weightDate = weightUsername ? now : '';
+        sheet.appendRow(['', '', '', identifier, description, depth, width, height, weight, now, hanger, '', dimUsername, pkgDepth, pkgWidth, pkgHeight, dimUsername, weightUsername, weightDate]);
         const newRow = sheet.getLastRow();
         sheet.getRange(newRow, 4).setNumberFormat('@');                 // D: barcode
         sheet.getRange(newRow, 6, 1, 3).setNumberFormat('0.00');       // F-H
         sheet.getRange(newRow, 9).setNumberFormat('0.000');             // I
-        sheet.getRange(newRow, 10).setNumberFormat('dd/mm/yyyy hh:mm'); // J
+        sheet.getRange(newRow, 10).setNumberFormat('dd/mm/yyyy hh:mm'); // J: DimDate
         sheet.getRange(newRow, 11).setDataValidation(
           SpreadsheetApp.newDataValidation().requireCheckbox().build()
         );
         sheet.getRange(newRow, 14, 1, 3).setNumberFormat('0.00');      // N-P
+        if (weightUsername) sheet.getRange(newRow, 19).setNumberFormat('dd/mm/yyyy hh:mm'); // S: WeightDate
       }
       return ContentService
         .createTextOutput(JSON.stringify({ ok: true, found: found }))
