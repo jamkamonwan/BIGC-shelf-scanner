@@ -217,6 +217,27 @@ export default function App() {
     return (a.cls || '').localeCompare(b.cls || '')
   })
 
+  const emptyState = (() => {
+    const msg = (icon, title, sub, color = '#374151') => (
+      <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>{icon}</div>
+        <p style={{ fontWeight: 600, fontSize: 16, color }}>{title}</p>
+        {sub && <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{sub}</p>}
+      </div>
+    )
+    if (barcodeQuery) {
+      const match = (item) =>
+        (item.barcode || '').includes(barcodeQuery) ||
+        (item.description || '').toLowerCase().includes(barcodeQuery)
+      if (!itemList.some(match))  return msg('🔍', 'ไม่พบสินค้าที่ค้นหา', 'ตรวจสอบบาร์โค้ดหรือชื่อสินค้าอีกครั้ง')
+      if (!remaining.some(match)) return msg('✅', 'สินค้านี้บันทึกครบแล้ว', 'ข้อมูล W/H/D และน้ำหนักครบถ้วนแล้ว', '#16a34a')
+      return msg('ℹ️', 'สินค้านี้อยู่ในหมวด/สถานะอื่น', 'ลองยกเลิกตัวกรอง Division หรือสถานะ')
+    }
+    if (selectedStatus === 'need_weight') return msg('⚖️', 'ไม่มีสินค้ารอใส่ข้อมูลชั่งจากผลการกรอง', 'ลองเปลี่ยน Division หรือตัวกรองสถานะ')
+    if (selectedStatus === 'need_dim')    return msg('📐', 'ไม่มีสินค้ารอใส่ข้อมูลวัดจากผลการกรอง', 'ลองเปลี่ยน Division หรือตัวกรองสถานะ')
+    return msg('✅', selectedDiv ? `${selectedDiv} — ครบแล้ว!` : 'ครบทุกรายการแล้ว!', 'สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน', '#16a34a')
+  })()
+
   const tabBar = step !== 'form' && (
     <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#fff' }}>
       <button
@@ -413,27 +434,7 @@ export default function App() {
 
           {/* Item rows */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {visibleItems.length === 0 ? (
-              barcodeQuery ? (
-                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-                  <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
-                  <p style={{ fontWeight: 600, fontSize: 16, color: '#374151' }}>ไม่พบสินค้าที่ค้นหา</p>
-                  <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 4 }}>
-                    ลองค้นหาใน Division อื่น หรือตรวจสอบบาร์โค้ด
-                  </p>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '48px 16px', color: '#16a34a' }}>
-                  <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-                  <p style={{ fontWeight: 600, fontSize: 16 }}>
-                    {selectedDiv ? `${selectedDiv} — ครบแล้ว!` : 'ครบทุกรายการแล้ว!'}
-                  </p>
-                  <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                    สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน
-                  </p>
-                </div>
-              )
-            ) : (
+            {visibleItems.length === 0 ? emptyState : (
               <>
               {visibleItems.slice(0, showCount).map((item, idx) => (
                 <div
