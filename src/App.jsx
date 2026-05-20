@@ -412,15 +412,25 @@ export default function App() {
           {/* Item rows */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {visibleItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 16px', color: '#16a34a' }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-                <p style={{ fontWeight: 600, fontSize: 16 }}>
-                  {selectedDiv ? `${selectedDiv} — ครบแล้ว!` : 'ครบทุกรายการแล้ว!'}
-                </p>
-                <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                  สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน
-                </p>
-              </div>
+              barcodeQuery ? (
+                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+                  <p style={{ fontWeight: 600, fontSize: 16, color: '#374151' }}>ไม่พบสินค้าที่ค้นหา</p>
+                  <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 4 }}>
+                    ลองค้นหาใน Division อื่น หรือตรวจสอบบาร์โค้ด
+                  </p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '48px 16px', color: '#16a34a' }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+                  <p style={{ fontWeight: 600, fontSize: 16 }}>
+                    {selectedDiv ? `${selectedDiv} — ครบแล้ว!` : 'ครบทุกรายการแล้ว!'}
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                    สินค้าทุกชิ้นมีข้อมูลขนาดครบถ้วน
+                  </p>
+                </div>
+              )
             ) : (
               <>
               {visibleItems.slice(0, showCount).map((item, idx) => (
@@ -507,9 +517,9 @@ export default function App() {
           initialDepth={foundItem?.depth ?? ''}
           initialWeight={foundItem?.weight ?? ''}
           initialHanger={foundItem?.hanger ?? false}
-          initialPkgDepth={foundItem?.pkgDepth ?? ''}
-          initialPkgWidth={foundItem?.pkgWidth ?? ''}
-          initialPkgHeight={foundItem?.pkgHeight ?? ''}
+          initialPkgDepth={foundItem?.pkgDepth || ''}
+          initialPkgWidth={foundItem?.pkgWidth || ''}
+          initialPkgHeight={foundItem?.pkgHeight || ''}
           initialDimUsername={foundItem?.dimUsername ?? ''}
           initialWeightUsername={foundItem?.weightUsername ?? ''}
           foundItem={foundItem}
