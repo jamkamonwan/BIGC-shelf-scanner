@@ -23,12 +23,23 @@ function itemHasDims(item) {
          item.width !== 0 && item.height !== 0 && item.depth !== 0
 }
 
+function itemHasWeight(item) {
+  return item.weight !== '' && item.weight != null && Number(item.weight) > 0
+}
+
+function getStatus(item) {
+  if (!itemHasDims(item)) return 'need_dim'
+  if (!itemHasWeight(item)) return 'need_weight'
+  return 'done'
+}
+
 export default function App() {
   const [step, setStep]           = useState('scan')
   const [activeTab, setActiveTab] = useState('scan') // 'scan' | 'list'
-  const [selectedDiv, setSelectedDiv] = useState(null) // null = all divisions
-  const [barcodeSearch, setBarcodeSearch] = useState('')
-  const [showCount, setShowCount] = useState(100)
+  const [selectedDiv, setSelectedDiv]       = useState(null)   // null = all
+  const [selectedStatus, setSelectedStatus] = useState(null)   // null | 'need_dim' | 'need_weight'
+  const [barcodeSearch, setBarcodeSearch]   = useState('')
+  const [showCount, setShowCount]           = useState(100)
   const [barcode, setBarcode]     = useState('')
   const [foundItem, setFoundItem]             = useState(null)
   const [notFoundBarcode, setNotFoundBarcode] = useState('')
@@ -172,9 +183,11 @@ export default function App() {
     )
   }
 
-  const remaining  = Array.isArray(itemList) ? itemList.filter(item => !itemHasDims(item)) : []
-  const total      = Array.isArray(itemList) ? itemList.length : 0
-  const doneCount  = total - remaining.length
+  const total        = Array.isArray(itemList) ? itemList.length : 0
+  const remaining    = Array.isArray(itemList) ? itemList.filter(item => getStatus(item) !== 'done') : []
+  const needDimCount    = remaining.filter(item => getStatus(item) === 'need_dim').length
+  const needWeightCount = remaining.filter(item => getStatus(item) === 'need_weight').length
+  const doneCount    = total - remaining.length
 
   // Unique divisions from remaining items (preserve sheet order)
   const divisions = []
@@ -186,13 +199,16 @@ export default function App() {
   const divFiltered = selectedDiv
     ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
     : remaining
+  const statusFiltered = selectedStatus
+    ? divFiltered.filter(item => getStatus(item) === selectedStatus)
+    : divFiltered
   const barcodeQuery = barcodeSearch.trim().toLowerCase()
   const visibleItems = (barcodeQuery
-    ? divFiltered.filter(item =>
+    ? statusFiltered.filter(item =>
         (item.barcode || '').includes(barcodeQuery) ||
         (item.description || '').toLowerCase().includes(barcodeQuery)
       )
-    : divFiltered
+    : statusFiltered
   ).slice().sort((a, b) => {
     const dept = (a.department || '').localeCompare(b.department || '')
     if (dept !== 0) return dept
@@ -297,15 +313,15 @@ export default function App() {
           {/* Summary bar */}
           <div style={{
             padding: '8px 16px', background: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            flexShrink: 0,
+            borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
           }}>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>
-              ยังไม่มีข้อมูล <strong style={{ color: '#dc2626' }}>{remaining.length}</strong> รายการ
-            </span>
-            <span style={{ fontSize: 13, color: '#6b7280' }}>
-              เสร็จแล้ว <strong style={{ color: '#16a34a' }}>{doneCount}</strong> / {total}
+            <div style={{ display: 'flex', gap: 10, fontSize: 12, flexWrap: 'wrap' }}>
+              <span style={{ color: '#dc2626', fontWeight: 600 }}>รอ Dim: {needDimCount}</span>
+              <span style={{ color: '#ea580c', fontWeight: 600 }}>รอชั่ง: {needWeightCount}</span>
+            </div>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              ✅ <strong style={{ color: '#16a34a' }}>{doneCount}</strong> / {total}
             </span>
           </div>
 
@@ -318,7 +334,7 @@ export default function App() {
               WebkitOverflowScrolling: 'touch',
             }}>
               <button
-                onClick={() => { setSelectedDiv(null); setBarcodeSearch(''); setShowCount(100) }}
+                onClick={() => { setSelectedDiv(null); setSelectedStatus(null); setBarcodeSearch(''); setShowCount(100) }}
                 style={{
                   flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                   border: '1.5px solid',
@@ -336,7 +352,7 @@ export default function App() {
                 return (
                   <button
                     key={div}
-                    onClick={() => { setSelectedDiv(div); setBarcodeSearch(''); setShowCount(100) }}
+                    onClick={() => { setSelectedDiv(div); setSelectedStatus(null); setBarcodeSearch(''); setShowCount(100) }}
                     style={{
                       flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                       border: '1.5px solid',
@@ -352,6 +368,31 @@ export default function App() {
               })}
             </div>
           )}
+
+          {/* Status filter pills */}
+          <div style={{
+            display: 'flex', gap: 6, padding: '6px 12px', background: '#fff',
+            borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+          }}>
+            {[
+              { key: null,           label: `ทั้งหมด (${divFiltered.length})`,                                          bg: '#3b82f6' },
+              { key: 'need_dim',     label: `รอ Dim (${divFiltered.filter(i => getStatus(i) === 'need_dim').length})`,     bg: '#dc2626' },
+              { key: 'need_weight',  label: `รอชั่ง (${divFiltered.filter(i => getStatus(i) === 'need_weight').length})`,  bg: '#ea580c' },
+            ].map(({ key, label, bg }) => {
+              const active = selectedStatus === key
+              return (
+                <button key={String(key)} onClick={() => { setSelectedStatus(key); setShowCount(100) }} style={{
+                  flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12,
+                  border: `1.5px solid ${active ? bg : '#d1d5db'}`,
+                  background: active ? bg : '#fff',
+                  color: active ? '#fff' : '#374151',
+                  cursor: 'pointer', fontWeight: 500,
+                }}>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
 
           {/* Barcode search within selected division */}
           <div style={{ padding: '8px 12px', background: '#fff', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
@@ -403,6 +444,16 @@ export default function App() {
                     </div>
                     <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontFamily: 'monospace' }}>{item.barcode}</span>
+                      {getStatus(item) === 'need_dim' && (
+                        <span style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '0 5px', fontSize: 11, fontWeight: 600 }}>
+                          รอ Dim
+                        </span>
+                      )}
+                      {getStatus(item) === 'need_weight' && (
+                        <span style={{ background: '#fff7ed', color: '#ea580c', borderRadius: 4, padding: '0 5px', fontSize: 11, fontWeight: 600 }}>
+                          รอชั่ง
+                        </span>
+                      )}
                       {!selectedDiv && item.division && (
                         <span style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: 4, padding: '0 5px', fontSize: 11 }}>
                           {item.division}
