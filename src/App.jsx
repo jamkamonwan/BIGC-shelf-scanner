@@ -186,9 +186,12 @@ export default function App() {
   const divFiltered = selectedDiv
     ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
     : remaining
-  const barcodeQuery = barcodeSearch.trim()
+  const barcodeQuery = barcodeSearch.trim().toLowerCase()
   const visibleItems = (barcodeQuery
-    ? divFiltered.filter(item => (item.barcode || '').includes(barcodeQuery))
+    ? divFiltered.filter(item =>
+        (item.barcode || '').includes(barcodeQuery) ||
+        (item.description || '').toLowerCase().includes(barcodeQuery)
+      )
     : divFiltered
   ).slice().sort((a, b) => {
     const dept = (a.department || '').localeCompare(b.department || '')
@@ -354,8 +357,7 @@ export default function App() {
           <div style={{ padding: '8px 12px', background: '#fff', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
             <input
               type="text"
-              inputMode="numeric"
-              placeholder={selectedDiv ? `ค้นหาบาร์โค้ดใน ${selectedDiv}…` : 'ค้นหาบาร์โค้ด…'}
+              placeholder={selectedDiv ? `ค้นหาบาร์โค้ดหรือชื่อสินค้าใน ${selectedDiv}…` : 'ค้นหาบาร์โค้ดหรือชื่อสินค้า…'}
               value={barcodeSearch}
               onChange={e => { setBarcodeSearch(e.target.value); setShowCount(100) }}
               style={{
