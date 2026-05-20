@@ -333,6 +333,7 @@ export default function DimensionForm({
           onFocus={selectAll}
           onBlur={() => normDecimal(weight, setWeight)}
           onKeyDown={advance(pkgWidthRef)}
+          style={{ background: '#fffbeb', borderColor: '#f59e0b', color: '#92400e' }}
         />
       </div>
 
