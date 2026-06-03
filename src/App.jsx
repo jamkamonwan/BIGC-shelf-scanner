@@ -103,11 +103,16 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline)
   }, [fetchList])
 
+  const strip0 = (s) => s.replace(/^0+/, '') || s
+
   const handleDetected = useCallback((code) => {
     const trimmed = code.trim()
     const list = itemListRef.current
     if (!Array.isArray(list)) return
-    const found = list.find((item) => (item.barcode || '').trim() === trimmed)
+    const found = list.find((item) => {
+      const bc = (item.barcode || '').trim()
+      return bc === trimmed || strip0(bc) === strip0(trimmed)
+    })
     if (!found) {
       setNotFoundBarcode(trimmed)
       setStep('notfound')
@@ -128,9 +133,10 @@ export default function App() {
     if (savedData) {
       const prev = itemListRef.current
       if (Array.isArray(prev)) {
-        const idx = prev.findIndex(item =>
-          (item.barcode || '').trim() === savedData.barcode
-        )
+        const idx = prev.findIndex(item => {
+          const bc = (item.barcode || '').trim()
+          return bc === savedData.barcode || strip0(bc) === strip0(savedData.barcode)
+        })
         let next
         if (idx === -1) {
           next = [...prev, {
