@@ -3,6 +3,7 @@ import BarcodeScanner from './components/BarcodeScanner'
 import DimensionForm from './components/DimensionForm'
 import { SCRIPT_URL } from './config'
 import { flushQueue, getPendingCount } from './saveQueue'
+import { FIXED_BARCODES } from './fixedBarcodes'
 
 const CACHE_KEY    = 'shelf_scanner_items_v4'
 const CACHE_TS_KEY = 'shelf_scanner_items_ts'
@@ -37,7 +38,8 @@ export default function App() {
   const [step, setStep]           = useState('scan')
   const [activeTab, setActiveTab] = useState('scan') // 'scan' | 'list'
   const [selectedDiv, setSelectedDiv]       = useState(null)   // null = all
-  const [selectedStatus, setSelectedStatus] = useState(null)   // null | 'need_dim' | 'need_weight'
+  const [selectedStatus, setSelectedStatus] = useState(null)   // null | 'need_weight'
+  const [showFixDim, setShowFixDim]         = useState(false)
   const [barcodeSearch, setBarcodeSearch]   = useState('')
   const [showCount, setShowCount]           = useState(100)
   const [barcode, setBarcode]     = useState('')
@@ -211,19 +213,26 @@ export default function App() {
     if (d && !divisions.includes(d)) divisions.push(d)
   })
 
+  const fixDimCount = Array.isArray(itemList)
+    ? itemList.filter(item => FIXED_BARCODES.has((item.barcode || '').trim())).length
+    : 0
+
   const divFiltered = selectedDiv
     ? remaining.filter(item => (item.division || '').trim() === selectedDiv)
     : remaining
   const statusFiltered = selectedStatus
     ? divFiltered.filter(item => getStatus(item) === selectedStatus)
     : divFiltered
+  const fixDimFiltered = showFixDim
+    ? itemList.filter(item => FIXED_BARCODES.has((item.barcode || '').trim()))
+    : statusFiltered
   const barcodeQuery = barcodeSearch.trim().toLowerCase()
   const visibleItems = (barcodeQuery
-    ? statusFiltered.filter(item =>
+    ? fixDimFiltered.filter(item =>
         (item.barcode || '').includes(barcodeQuery) ||
         (item.description || '').toLowerCase().includes(barcodeQuery)
       )
-    : statusFiltered
+    : fixDimFiltered
   ).slice().sort((a, b) => {
     const dept = (a.department || '').localeCompare(b.department || '')
     if (dept !== 0) return dept
@@ -352,16 +361,15 @@ export default function App() {
             borderBottom: '1px solid #e5e7eb', flexShrink: 0,
             display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
           }}>
-            {[
-              { key: 'need_dim',    label: '📐 รอ Dim',  count: needDimCount,    active: '#dc2626' },
-              { key: 'need_weight', label: '⚖️ รอชั่ง', count: needWeightCount, active: '#ea580c' },
-            ].map(({ key, label, count, active }) => {
-              const on = selectedStatus === key
+            {/* รอชั่ง filter */}
+            {(() => {
+              const on = selectedStatus === 'need_weight'
+              const active = '#ea580c'
               return (
                 <button
-                  key={key}
                   onClick={() => {
-                    setSelectedStatus(on ? null : key)
+                    setSelectedStatus(on ? null : 'need_weight')
+                    setShowFixDim(false)
                     setSelectedDiv(null)
                     setBarcodeSearch('')
                     setShowCount(100)
@@ -374,10 +382,35 @@ export default function App() {
                     cursor: 'pointer', fontWeight: 700,
                   }}
                 >
-                  {label}: {count}
+                  ⚖️ รอชั่ง: {needWeightCount}
                 </button>
               )
-            })}
+            })()}
+            {/* fix dim filter */}
+            {(() => {
+              const on = showFixDim
+              const active = '#7c3aed'
+              return (
+                <button
+                  onClick={() => {
+                    setShowFixDim(!on)
+                    setSelectedStatus(null)
+                    setSelectedDiv(null)
+                    setBarcodeSearch('')
+                    setShowCount(100)
+                  }}
+                  style={{
+                    flexShrink: 0, padding: '5px 12px', borderRadius: 20, fontSize: 12,
+                    border: `1.5px solid ${on ? active : '#d1d5db'}`,
+                    background: on ? active : '#fff',
+                    color: on ? '#fff' : active,
+                    cursor: 'pointer', fontWeight: 700,
+                  }}
+                >
+                  🔧 fix dim: {fixDimCount}
+                </button>
+              )
+            })()}
             <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 'auto' }}>
               ✅ <strong style={{ color: '#16a34a' }}>{doneCount}</strong> / {total}
             </span>
@@ -392,7 +425,7 @@ export default function App() {
               WebkitOverflowScrolling: 'touch',
             }}>
               <button
-                onClick={() => { setSelectedDiv(null); setSelectedStatus(null); setBarcodeSearch(''); setShowCount(100) }}
+                onClick={() => { setSelectedDiv(null); setSelectedStatus(null); setShowFixDim(false); setBarcodeSearch(''); setShowCount(100) }}
                 style={{
                   flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                   border: '1.5px solid',
@@ -410,7 +443,7 @@ export default function App() {
                 return (
                   <button
                     key={div}
-                    onClick={() => { setSelectedDiv(div); setSelectedStatus(null); setBarcodeSearch(''); setShowCount(100) }}
+                    onClick={() => { setSelectedDiv(div); setSelectedStatus(null); setShowFixDim(false); setBarcodeSearch(''); setShowCount(100) }}
                     style={{
                       flexShrink: 0, padding: '5px 14px', borderRadius: 20, fontSize: 13,
                       border: '1.5px solid',
